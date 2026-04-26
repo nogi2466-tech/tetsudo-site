@@ -3,47 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Cloud Portal</title>
+    <title>Tetsudo Portal</title>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
         body { font-family: -apple-system, sans-serif; background: #fafafa; margin: 0; padding-bottom: 60px; }
-        header { background: #fff; border-bottom: 1px solid #ddd; padding: 15px; position: sticky; top: 0; text-align: center; }
+        header { background: #fff; border-bottom: 1px solid #ddd; padding: 15px; position: sticky; top: 0; text-align: center; z-index: 1000; }
         nav { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
-        button { border: 1px solid #ddd; background: #fff; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 14px; }
-        button.active { background: #007aff; color: #fff; border-color: #007aff; }
+        
+        /* ボタンのデザイン */
+        .nav-btn { border: 1px solid #ddd; background: #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .nav-btn.active { background: #e50914; color: #fff; border-color: #e50914; }
+        
         .container { max-width: 500px; margin: auto; padding: 15px; }
-        .link-card { background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-        .link-title { font-weight: 500; font-size: 15px; }
-        .open-btn { color: #007aff; text-decoration: none; font-weight: 600; font-size: 14px; }
-        #edit-panel { display: none; background: #f0f0f0; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-        input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        
+        /* タブコンテンツの初期状態 */
+        .tab-content { display: none; flex-direction: column; gap: 10px; }
+        .tab-content.active { display: flex; }
+
+        .link-card { background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .link-title { font-weight: bold; font-size: 15px; flex: 1; }
+        .open-btn { background: #e50914; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+        
+        #edit-panel { display: none; background: #fffbe6; padding: 15px; border: 1px dashed #ffe58f; border-radius: 10px; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
     </style>
 </head>
 <body>
 
 <header>
-    <strong>ポータルサイト</strong>
+    <strong>鉄道ポータル</strong>
     <nav>
-        <button onclick="showTab('keio')" id="btn-keio">京王線</button>
-        <button onclick="showTab('jr')" id="btn-jr">JR</button>
-        <button onclick="showTab('other')" id="btn-other">その他</button>
-        <button onclick="unlockAdmin()" id="btn-lock">⚙️</button>
+        <button onclick="showTab('keio')" id="btn-keio" class="nav-btn">京王線</button>
+        <button onclick="showTab('jr')" id="btn-jr" class="nav-btn">JR</button>
+        <button onclick="showTab('other')" id="btn-other" class="nav-btn">その他</button>
+        <button onclick="unlockAdmin()" id="btn-lock" class="nav-btn">⚙️</button>
     </nav>
 </header>
 
 <div class="container">
     <div id="edit-panel">
-        <input type="text" id="new-title" placeholder="タイトル">
-        <input type="text" id="new-url" placeholder="URL">
-        <button onclick="pushToCloud()" style="width:100%; background:#007aff; color:#fff;">保存</button>
+        <strong id="target-label">京王線に追加</strong>
+        <div style="margin-top:10px;">
+            <input type="text" id="new-title" placeholder="動画のタイトル">
+            <input type="text" id="new-url" placeholder="YouTube URL">
+            <button onclick="pushToCloud()" style="width:100%; background:#28a745; color:#fff; padding:12px; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">クラウドに保存</button>
+        </div>
     </div>
-    <div id="keio" class="tab-content"></div>
+
+    <!-- コンテンツ表示エリア -->
+    <div id="keio" class="tab-content active"></div>
     <div id="jr" class="tab-content"></div>
     <div id="other" class="tab-content"></div>
 </div>
 
 <script>
+    // Firebase設定（あなたの設定を反映済み）
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxEOJ0GCtCEnM2xqjMcr-Rc",
         databaseURL: "https://firebaseio.com",
@@ -51,22 +66,32 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    
     let currentTab = 'keio';
     let isAdmin = false;
 
+    // データのリアルタイム受信
     db.ref('links').on('value', (s) => render(s.val() || {}));
 
-    function pushToCloud() {
-        const t = document.getElementById('new-title').value;
-        const u = document.getElementById('new-url').value;
-        if(!t || !u) return;
-        db.ref('links/' + currentTab).once('value', (s) => {
-            let list = s.val() || [];
-            list.push({title: t, url: u});
-            db.ref('links/' + currentTab).set(list);
-            document.getElementById('new-title').value = '';
-            document.getElementById('new-url').value = '';
+    // タブ切り替えの修正
+    function showTab(tabId) {
+        currentTab = tabId;
+        
+        // すべてのタブを隠す
+        document.querySelectorAll('.tab-content').forEach(el => {
+            el.classList.remove('active');
         });
+        // 指定したタブだけ出す
+        document.getElementById(tabId).classList.add('active');
+        
+        // ボタンの色を変える
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.getElementById('btn-' + tabId).classList.add('active');
+        
+        // 編集パネルのラベル更新
+        document.getElementById('target-label').innerText = document.getElementById('btn-'+tabId).innerText + 'に追加';
     }
 
     function render(data) {
@@ -78,9 +103,9 @@
                     container.innerHTML += `
                         <div class="link-card">
                             <span class="link-title">${item.title}</span>
-                            <div style="display:flex; gap:15px; align-items:center;">
+                            <div style="display:flex; gap:10px; align-items:center;">
                                 <a href="${item.url}" target="_blank" class="open-btn">開く</a>
-                                ${isAdmin ? `<button onclick="deleteLink('${tab}', ${index})" style="border:none; color:red; font-size:12px;">× 削除</button>` : ''}
+                                ${isAdmin ? `<button onclick="deleteLink('${tab}', ${index})" style="border:none; color:#dc3545; background:none; cursor:pointer; font-size:12px;">× 削除</button>` : ''}
                             </div>
                         </div>`;
                 });
@@ -88,7 +113,21 @@
         });
     }
 
+    function pushToCloud() {
+        const t = document.getElementById('new-title').value.trim();
+        const u = document.getElementById('new-url').value.trim();
+        if(!t || !u) return alert("入力してください");
+        db.ref('links/' + currentTab).once('value', (s) => {
+            let list = s.val() || [];
+            list.push({title: t, url: u});
+            db.ref('links/' + currentTab).set(list);
+            document.getElementById('new-title').value = '';
+            document.getElementById('new-url').value = '';
+        });
+    }
+
     function deleteLink(tab, index) {
+        if(!confirm("削除しますか？")) return;
         db.ref('links/' + tab).once('value', (s) => {
             let list = s.val() || [];
             list.splice(index, 1);
@@ -96,20 +135,15 @@
         });
     }
 
-    function showTab(t) {
-        currentTab = t;
-        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-        document.getElementById(t).style.display = 'block';
-        document.getElementById('btn-'+t).classList.add('active');
-    }
-
     function unlockAdmin() {
-        if (isAdmin || prompt("Pass?") === "0829") {
+        if (isAdmin || prompt("パスワード") === "0829") {
             isAdmin = !isAdmin;
             document.getElementById('edit-panel').style.display = isAdmin ? 'block' : 'none';
+            db.ref('links').once('value', s => render(s.val() || {}));
         }
     }
+
+    // 最初は京王線を選択状態にする
     showTab('keio');
 </script>
 </body>
