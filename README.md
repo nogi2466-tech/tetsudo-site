@@ -3,30 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetsudo Cloud Portal</title>
-    <!-- Firebaseのプログラムを読み込む -->
+    <title>Tetsudo Cloud</title>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
         body { font-family: sans-serif; margin: 0; background: #f0f2f5; padding-bottom: 50px; }
-        header { background: #333; color: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; }
-        nav { display: flex; justify-content: center; gap: 8px; }
-        button { padding: 10px 15px; cursor: pointer; border: none; border-radius: 5px; background: #444; color: white; font-weight: bold; }
+        header { background: #333; color: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; text-align: center; }
+        nav { display: flex; justify-content: center; gap: 8px; margin-top: 5px; }
+        button { padding: 8px 12px; cursor: pointer; border: none; border-radius: 5px; background: #444; color: white; font-weight: bold; }
         button.active { background: #e50914; }
         .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
         #edit-panel { display: none; background: #fffbe6; padding: 15px; border: 2px dashed #ffe58f; border-radius: 8px; margin-bottom: 20px; }
         .input-group { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
         input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        .link-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-        .link-info { flex: 1; overflow: hidden; }
-        .link-title { font-weight: bold; display: block; color: #333; }
+        .tab-content { display: none; flex-direction: column; gap: 10px; }
+        .link-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .link-title { font-weight: bold; color: #333; flex: 1; }
         .open-btn { background: #e50914; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: bold; }
-        .del-btn { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <header>
+    <strong>Tetsudo Portal</strong>
     <nav>
         <button onclick="showTab('keio')" id="btn-keio">京王線</button>
         <button onclick="showTab('jr')" id="btn-jr">JR</button>
@@ -37,63 +36,52 @@
 
 <div class="container">
     <div id="edit-panel">
-        <strong>【<span id="label">京王線</span>】に動画を追加</strong>
+        <strong>【<span id="label">京王線</span>】に追加</strong>
         <div class="input-group">
-            <input type="text" id="new-title" placeholder="動画のタイトルを入力">
-            <input type="text" id="new-url" placeholder="YouTube URLを貼り付け">
-            <button onclick="pushToCloud()" style="background: #28a745; padding: 12px; color:white; border:none; border-radius:4px; font-weight:bold;">クラウドに保存</button>
+            <input type="text" id="new-title" placeholder="動画のタイトル">
+            <input type="text" id="new-url" placeholder="YouTube URL">
+            <button onclick="pushToCloud()" style="background: #28a745; padding: 10px; color:white; border:none; border-radius:4px;">保存する</button>
         </div>
     </div>
-    <div id="keio" class="tab-content" style="display:none;"></div>
-    <div id="jr" class="tab-content" style="display:none;"></div>
-    <div id="other" class="tab-content" style="display:none;"></div>
+    <div id="keio" class="tab-content"></div>
+    <div id="jr" class="tab-content"></div>
+    <div id="other" class="tab-content"></div>
 </div>
 
 <script>
-    // --- 画像の情報をここに反映しました ---
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxEOJ0GCtCEnM2xqjMcr-Rc",
-        authDomain: "://firebaseapp.com",
         databaseURL: "https://firebaseio.com",
-        projectId: "tetsudo",
-        storageBucket: "tetsudo.firebasestorage.app",
-        messagingSenderId: "91814902933",
-        appId: "1:91814902933:web:f9a8a3bce73470b842ef9c",
-        measurementId: "G-MEZNHL1ER0"
+        projectId: "tetsudo"
     };
 
-    // Firebaseの開始
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let currentTab = 'keio';
     let isAdmin = false;
 
-    // クラウドからデータを受信して表示する（自動更新）
-    db.ref('links').on('value', (snapshot) => {
-        const data = snapshot.val() || { keio: [], jr: [], other: [] };
-        render(data);
-    });
+    // データの読み込み
+    db.ref('links').on('value', (s) => render(s.val() || {}));
 
     function pushToCloud() {
-        const title = document.getElementById('new-title').value.trim();
-        const url = document.getElementById('new-url').value.trim();
-        if(!title || !url) return alert("タイトルとURLを入れてね！");
-
+        const t = document.getElementById('new-title').value;
+        const u = document.getElementById('new-url').value;
+        if(!t || !u) return alert("入力してね");
         db.ref('links/' + currentTab).once('value', (s) => {
             let list = s.val() || [];
-            list.push({title: title, url: url});
-            db.ref('links/' + currentTab).set(list); // クラウドへ送信
+            list.push({title: t, url: u});
+            db.ref('links/' + currentTab).set(list);
             document.getElementById('new-title').value = '';
             document.getElementById('new-url').value = '';
         });
     }
 
     function deleteLink(tab, index) {
-        if(!confirm("削除しますか？")) return;
+        if(!confirm("消す？")) return;
         db.ref('links/' + tab).once('value', (s) => {
             let list = s.val() || [];
             list.splice(index, 1);
-            db.ref('links/' + tab).set(list); // クラウドへ送信
+            db.ref('links/' + tab).set(list);
         });
     }
 
@@ -101,14 +89,14 @@
         ['keio', 'jr', 'other'].forEach(tab => {
             const container = document.getElementById(tab);
             container.innerHTML = '';
-            if (data[tab]) {
+            if (data && data[tab]) {
                 data[tab].forEach((item, index) => {
                     container.innerHTML += `
                         <div class="link-card">
-                            <div class="link-info"><span class="link-title">${item.title}</span></div>
-                            <div style="display:flex; gap:10px;">
+                            <span class="link-title">${item.title}</span>
+                            <div style="display:flex; gap:5px;">
                                 <a href="${item.url}" target="_blank" class="open-btn">開く</a>
-                                ${isAdmin ? `<button class="del-btn" onclick="deleteLink('${tab}', ${index})">消す</button>` : ''}
+                                ${isAdmin ? `<button onclick="deleteLink('${tab}', ${index})" style="background:#dc3545; color:white; border:none; padding:8px; border-radius:4px;">消</button>` : ''}
                             </div>
                         </div>`;
                 });
@@ -126,10 +114,10 @@
     }
 
     function unlockAdmin() {
-        if (isAdmin || prompt("パスワードを入力") === "0829") {
+        if (isAdmin || prompt("パスワード") === "0829") {
             isAdmin = !isAdmin;
             document.getElementById('edit-panel').style.display = isAdmin ? 'block' : 'none';
-            document.getElementById('btn-lock').innerText = isAdmin ? '🔓 編集終了' : '🔒 設定';
+            document.getElementById('btn-lock').innerText = isAdmin ? '🔓 終了' : '🔒 設定';
             db.ref('links').once('value', s => render(s.val() || {}));
         }
     }
