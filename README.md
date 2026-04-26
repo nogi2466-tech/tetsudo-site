@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>鉄道ポータル クラウド管理</title>
-    <!-- Firebaseの読み込み -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
@@ -14,26 +13,18 @@
         .nav-btn { border: 1px solid #ddd; background: #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; }
         .nav-btn.active { background: #e50914; color: #fff; border-color: #e50914; }
         .container { max-width: 600px; margin: auto; padding: 15px; }
-        
-        /* リンクカード */
         .link-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 12px; }
         .link-title { font-weight: bold; font-size: 16px; display: block; margin-bottom: 5px; }
         .link-url-display { font-size: 11px; color: #888; word-break: break-all; display: block; background: #f9f9f9; padding: 5px; border-radius: 4px; margin-bottom: 10px; }
         .open-btn { background: #e50914; color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold; display: inline-block; }
-        
-        /* 設定パネル */
         #edit-panel { display: none; background: #fffbe6; padding: 15px; border: 2px dashed #ffe58f; border-radius: 10px; margin-bottom: 20px; }
         .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
         input { padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        
-        /* 送受信ボタン */
         .cloud-btns { display: flex; gap: 10px; margin-top: 10px; }
         .send-btn { flex: 1; background: #28a745; color: white; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .recv-btn { flex: 1; background: #007bff; color: white; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        
         .tab-content { display: none; flex-direction: column; }
         .tab-content.active { display: flex !important; }
-        
         .edit-item { border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin-bottom: 10px; background: white; }
     </style>
 </head>
@@ -50,29 +41,22 @@
 </header>
 
 <div class="container">
-    <!-- 設定・送受信パネル -->
     <div id="edit-panel">
         <h3 style="margin-top:0;">クラウド管理</h3>
-        
         <div class="input-group">
             <input type="text" id="new-title" placeholder="タイトルを入力">
             <input type="text" id="new-url" placeholder="YouTube URLを入力">
         </div>
-
         <div class="cloud-btns">
             <button onclick="pushToCloud()" class="send-btn">☁️ クラウドに送信</button>
             <button onclick="pullFromCloud()" class="recv-btn">🔄 クラウドから受信</button>
         </div>
-
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ddd;">
-        
         <div id="edit-list-area">
             <h4>【<span id="edit-tab-name">京王線</span>】の登録済みデータ</h4>
             <div id="edit-list-container"></div>
         </div>
     </div>
-
-    <!-- コンテンツ表示エリア -->
     <div id="keio" class="tab-content"></div>
     <div id="jr" class="tab-content"></div>
     <div id="other" class="tab-content"></div>
@@ -81,71 +65,58 @@
 <script>
     var currentTab = 'keio';
     var isAdmin = false;
-    var database;
+    var database = null;
     var localData = { keio: [], jr: [], other: [] };
 
+    // 画像から取得したあなたの最新設定を反映しました
+    const firebaseConfig = {
+        apiKey: "AIzaSyAe_KxKH-06cxEOJ0GCtCEnM2xqjMcr-Rc",
+        authDomain: "://firebaseapp.com",
+        databaseURL: "https://firebaseio.com",
+        projectId: "tetsudo",
+        storageBucket: "tetsudo.firebasestorage.app",
+        messagingSenderId: "91814902933",
+        appId: "1:91814902933:web:f9a8a3bce73470b842ef9c",
+        measurementId: "G-MEZNHL1ER0"
+    };
+
     function initApp() {
-        if (typeof firebase === 'undefined') {
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            pullFromCloud(true);
+            changeTab('keio');
+        } else {
             setTimeout(initApp, 500);
-            return;
         }
-        const config = {
-            apiKey: "AIzaSyAe_KxKH-06cxEOJ0GCtCEnM2xqjMcr-Rc",
-            databaseURL: "https://firebaseio.com",
-            projectId: "tetsudo"
-        };
-        firebase.initializeApp(config);
-        database = firebase.database();
-        
-        // 初回のみ自動受信
-        pullFromCloud(true);
-        changeTab('keio');
     }
 
-    // クラウドから受信（ボタン用）
-    function pullFromCloud(isInitial = false) {
+    function pullFromCloud(isInitial) {
+        if (!database) return;
         database.ref('links').once('value').then(function(snapshot) {
             localData = snapshot.val() || { keio: [], jr: [], other: [] };
             renderDisplay(localData);
             if(isAdmin) renderEditList();
-            if(!isInitial) alert("最新データをクラウドから受信しました！");
-        }).catch(function(e) {
-            alert("受信失敗: " + e.message);
-        });
+            if(!isInitial) alert("受信完了！");
+        }).catch(function(e) { alert("受信失敗: " + e.message); });
     }
 
-    // クラウドに送信（ボタン用）
     function pushToCloud() {
+        if (!database) return alert("接続準備中です");
         var t = document.getElementById('new-title').value.trim();
         var u = document.getElementById('new-url').value.trim();
-        
         if(!t || !u) return alert("タイトルとURLを入力してください");
 
-        // ローカルデータに一旦追加
         if(!localData[currentTab]) localData[currentTab] = [];
         localData[currentTab].push({title: t, url: u});
 
-        // クラウド全体を更新
         database.ref('links').set(localData).then(function() {
             document.getElementById('new-title').value = '';
             document.getElementById('new-url').value = '';
             renderDisplay(localData);
             if(isAdmin) renderEditList();
             alert("クラウドに送信（保存）しました！");
-        }).catch(function(e) {
-            alert("送信失敗: " + e.message);
-        });
-    }
-
-    // 項目削除（これも送信が必要）
-    function deleteItem(index) {
-        if(!confirm("この項目を削除し、クラウドに反映しますか？")) return;
-        localData[currentTab].splice(index, 1);
-        database.ref('links').set(localData).then(function() {
-            renderDisplay(localData);
-            renderEditList();
-            alert("削除してクラウドに送信しました");
-        });
+        }).catch(function(e) { alert("送信失敗: " + e.message); });
     }
 
     function renderDisplay(data) {
@@ -156,11 +127,7 @@
                 data[tab].forEach(function(item) {
                     var card = document.createElement('div');
                     card.className = 'link-card';
-                    card.innerHTML = `
-                        <span class="link-title">${item.title}</span>
-                        <span class="link-url-display">${item.url}</span>
-                        <a href="${item.url}" target="_blank" class="open-btn">YouTubeで開く</a>
-                    `;
+                    card.innerHTML = `<span class="link-title">${item.title}</span><span class="link-url-display">${item.url}</span><a href="${item.url}" target="_blank" class="open-btn">YouTubeで開く</a>`;
                     container.appendChild(card);
                 });
             }
@@ -174,14 +141,20 @@
         list.forEach(function(item, index) {
             var div = document.createElement('div');
             div.className = 'edit-item';
-            div.innerHTML = `
-                <div style="font-size:13px; margin-bottom:5px;"><strong>${item.title}</strong></div>
-                <div style="font-size:11px; color:#666; margin-bottom:8px;">${item.url}</div>
-                <button onclick="deleteItem(${index})" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">削除して送信</button>
-            `;
+            div.innerHTML = `<div style="font-size:13px; font-weight:bold;">${item.title}</div><button onclick="deleteItem(${index})" style="background:#dc3545; color:white; border:none; padding:5px; border-radius:3px; cursor:pointer; margin-top:5px;">削除して送信</button>`;
             container.appendChild(div);
         });
         document.getElementById('edit-tab-name').innerText = document.getElementById('btn-'+currentTab).innerText;
+    }
+
+    function deleteItem(index) {
+        if(!confirm("削除して送信しますか？")) return;
+        localData[currentTab].splice(index, 1);
+        database.ref('links').set(localData).then(function() {
+            renderDisplay(localData);
+            renderEditList();
+            alert("削除・送信完了");
+        });
     }
 
     function changeTab(id) {
