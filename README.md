@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetsudo Portal</title>
-    <!-- 【重要】Firebaseの本体を先に読み込む -->
+    <title>鉄道ポータル</title>
+    <!-- Firebaseの読み込み -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
@@ -17,7 +17,7 @@
         .tab-content { display: none; flex-direction: column; gap: 10px; }
         .tab-content.active { display: flex; }
         .link-card { background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .link-title { font-weight: bold; font-size: 15px; flex: 1; }
+        .link-title { font-weight: bold; font-size: 15px; flex: 1; text-align: left; }
         .open-btn { background: #e50914; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; }
         #edit-panel { display: none; background: #fffbe6; padding: 15px; border: 2px dashed #ffe58f; border-radius: 10px; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
@@ -50,9 +50,10 @@
 </div>
 
 <script>
-    // 変数を一番上で宣言する（エラー回避のため）
+    // 変数の初期化
     let currentTab = 'keio';
     let isAdmin = false;
+    let db;
 
     // Firebaseの設定
     const firebaseConfig = {
@@ -61,39 +62,45 @@
         projectId: "tetsudo"
     };
 
-    // Firebaseの初期化（ここで読み込みエラーを防ぐ）
-    if (typeof firebase !== 'undefined') {
+    // Firebaseの初期化とデータ監視
+    try {
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        // データの受信
+        db = firebase.database();
         db.ref('links').on('value', (s) => render(s.val() || {}));
-
-        // 保存機能
-        window.pushToCloud = function() {
-            const t = document.getElementById('new-title').value.trim();
-            const u = document.getElementById('new-url').value.trim();
-            if(!t || !u) return alert("入力してください");
-            db.ref('links/' + currentTab).once('value', (s) => {
-                let list = s.val() || [];
-                list.push({title: t, url: u});
-                db.ref('links/' + currentTab).set(list);
-                document.getElementById('new-title').value = '';
-                document.getElementById('new-url').value = '';
-            });
-        };
-
-        // 削除機能
-        window.deleteLink = function(tab, index) {
-            if(!confirm("削除しますか？")) return;
-            db.ref('links/' + tab).once('value', (s) => {
-                let list = s.val() || [];
-                list.splice(index, 1);
-                db.ref('links/' + tab).set(list);
-            });
-        };
+    } catch (e) {
+        console.error("Firebaseの初期化に失敗しました", e);
     }
 
+    // 保存機能
+    function pushToCloud() {
+        const t = document.getElementById('new-title').value.trim();
+        const u = document.getElementById('new-url').value.trim();
+        if(!t || !u) return alert("タイトルとURLを入力してください");
+        
+        db.ref('links/' + currentTab).once('value', (s) => {
+            let list = s.val() || [];
+            list.push({title: t, url: u});
+            db.ref('links/' + currentTab).set(list)
+                .then(() => {
+                    document.getElementById('new-title').value = '';
+                    document.getElementById('new-url').value = '';
+                    alert("保存しました！");
+                })
+                .catch((e) => alert("エラー: " + e.message));
+        });
+    }
+
+    // 削除機能
+    function deleteLink(tab, index) {
+        if(!confirm("削除しますか？")) return;
+        db.ref('links/' + tab).once('value', (s) => {
+            let list = s.val() || [];
+            list.splice(index, 1);
+            db.ref('links/' + tab).set(list);
+        });
+    }
+
+    // タブ切り替え
     function showTab(tabId) {
         currentTab = tabId;
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -103,6 +110,7 @@
         document.getElementById('target-label').innerText = document.getElementById('btn-'+tabId).innerText + 'に追加';
     }
 
+    // 描画機能
     function render(data) {
         ['keio', 'jr', 'other'].forEach(tab => {
             const container = document.getElementById(tab);
@@ -122,17 +130,16 @@
         });
     }
 
+    // 設定（管理者モード）解除
     function unlockAdmin() {
         if (isAdmin || prompt("パスワード") === "0829") {
             isAdmin = !isAdmin;
             document.getElementById('edit-panel').style.display = isAdmin ? 'block' : 'none';
-            if (typeof firebase !== 'undefined') {
-                firebase.database().ref('links').once('value', s => render(s.val() || {}));
-            }
+            db.ref('links').once('value', s => render(s.val() || {}));
         }
     }
 
-    // 起動時に初期表示
+    // 初期表示
     showTab('keio');
 </script>
 </body>
