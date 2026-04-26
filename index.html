@@ -12,16 +12,25 @@
         nav { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
         .nav-btn { border: 1px solid #ddd; background: #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; }
         .nav-btn.active { background: #e50914; color: #fff; border-color: #e50914; }
+        
         .container { max-width: 600px; margin: auto; padding: 15px; }
-        .sync-area { display: flex; gap: 10px; margin-bottom: 20px; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        /* 同期ボタンエリア */
+        .sync-area { display: flex; gap: 10px; margin-bottom: 20px; }
         .send-btn { flex: 1; background: #28a745; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; opacity: 0.5; }
         .recv-btn { flex: 1; background: #007bff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; opacity: 0.5; }
+
+        /* 入力エリアの改良 */
+        #edit-panel { display: none; background: #fffbe6; padding: 15px; border: 2px dashed #ffe58f; border-radius: 10px; margin-bottom: 20px; }
+        .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
+        .add-inline-btn { background: #444; color: white; border: none; padding: 0 15px; border-radius: 5px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+
         .link-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 12px; }
         .link-title { font-weight: bold; font-size: 16px; display: block; margin-bottom: 5px; }
         .link-url-display { font-size: 11px; color: #888; word-break: break-all; display: block; background: #f9f9f9; padding: 5px; border-radius: 4px; margin-bottom: 10px; }
         .open-btn { background: #e50914; color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold; display: inline-block; }
-        #edit-panel { display: none; background: #fffbe6; padding: 15px; border: 2px dashed #ffe58f; border-radius: 10px; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+
         .tab-content { display: none; flex-direction: column; }
         .tab-content.active { display: flex !important; }
     </style>
@@ -40,16 +49,25 @@
 
 <div class="container">
     <div class="sync-area">
-        <button id="recv-btn" onclick="pullFromCloud()" class="recv-btn" disabled>受信（準備中...）</button>
-        <button id="send-btn" onclick="showSyncAlert()" class="send-btn" disabled>送信（準備中...）</button>
+        <button id="recv-btn" onclick="pullFromCloud()" class="recv-btn" disabled>準備中...</button>
+        <button id="send-btn" onclick="showSyncAlert()" class="send-btn" disabled>クラウドに送信</button>
     </div>
 
     <div id="edit-panel">
-        <h4 style="margin-top:0;">新規追加（送信ボタンで確定）</h4>
-        <input type="text" id="new-title" placeholder="タイトルを入力">
-        <input type="text" id="new-url" placeholder="YouTube URLを入力">
-        <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
-        <div id="edit-list-container"></div>
+        <h4 style="margin-top:0;">新規追加（入力して各ボタンで確定）</h4>
+        
+        <!-- タイトル入力行 -->
+        <div class="input-row">
+            <input type="text" id="new-title" placeholder="タイトルを入力">
+        </div>
+        
+        <!-- URL入力行 ＋ 追加ボタン -->
+        <div class="input-row">
+            <input type="text" id="new-url" placeholder="YouTube URLを入力">
+            <button onclick="addToList()" class="add-inline-btn">リストに追加</button>
+        </div>
+        
+        <p style="font-size: 11px; color: #856404; margin: 5px 0 0;">※「リストに追加」したあと、上の「クラウドに送信」を押すと完了です。</p>
     </div>
 
     <div id="keio" class="tab-content"></div>
@@ -79,11 +97,8 @@
             firebase.initializeApp(firebaseConfig);
             database = firebase.database();
             
-            // 接続完了後にボタンを有効化
             document.getElementById('send-btn').disabled = false;
             document.getElementById('send-btn').style.opacity = "1";
-            document.getElementById('send-btn').innerText = "☁️ クラウドに送信";
-            
             document.getElementById('recv-btn').disabled = false;
             document.getElementById('recv-btn').style.opacity = "1";
             document.getElementById('recv-btn').innerText = "🔄 クラウドから受信";
@@ -100,32 +115,37 @@
         database.ref('links').once('value').then(function(snapshot) {
             localData = snapshot.val() || { keio: [], jr: [], other: [] };
             renderDisplay(localData);
-            if(!isInitial) alert("最新データを受信しました！");
-        }).catch(function(e) { alert("受信失敗: " + e.message); });
+            if(!isInitial) alert("受信しました！");
+        });
+    }
+
+    // 「リストに追加」ボタンの処理
+    function addToList() {
+        var t = document.getElementById('new-title').value.trim();
+        var u = document.getElementById('new-url').value.trim();
+        if(!t || !u) return alert("タイトルとURLを両方入力してください");
+
+        if(!localData[currentTab]) localData[currentTab] = [];
+        localData[currentTab].push({title: t, url: u});
+        
+        renderDisplay(localData);
+        document.getElementById('new-title').value = '';
+        document.getElementById('new-url').value = '';
+        alert("リストに加えました。最後に「クラウドに送信」を押してください。");
     }
 
     function showSyncAlert() {
         if (isAdmin) {
             pushToCloud();
         } else {
-            alert("「送信」は設定（⚙️）からログイン中のみ可能です。");
+            alert("ログイン中のみ「送信」可能です。");
         }
     }
 
     function pushToCloud() {
-        if (!database) return alert("接続準備中です");
-        var t = document.getElementById('new-title').value.trim();
-        var u = document.getElementById('new-url').value.trim();
-        if(!t || !u) return alert("タイトルとURLを入力してください");
-
-        if(!localData[currentTab]) localData[currentTab] = [];
-        localData[currentTab].push({title: t, url: u});
-
+        if (!database) return alert("接続中です...");
         database.ref('links').set(localData).then(function() {
-            document.getElementById('new-title').value = '';
-            document.getElementById('new-url').value = '';
-            renderDisplay(localData);
-            alert("クラウドに送信しました！");
+            alert("クラウドに送信（保存）が完了しました！");
         });
     }
 
@@ -164,8 +184,6 @@
             isAdmin = true;
             document.getElementById('edit-panel').style.display = 'block';
             document.getElementById('btn-lock').innerText = '🔓';
-        } else if (pass !== null) {
-            alert("パスワードが違います");
         }
     }
 
