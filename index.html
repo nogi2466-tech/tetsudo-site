@@ -12,26 +12,18 @@
         nav { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
         .nav-btn { border: 1px solid #ddd; background: #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; }
         .nav-btn.active { background: #e50914; color: #fff; border-color: #e50914; }
-        
         .container { max-width: 600px; margin: auto; padding: 15px; }
-
-        /* 同期ボタンエリア（常時表示） */
         .sync-area { display: flex; gap: 10px; margin-bottom: 20px; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .send-btn { flex: 1; background: #28a745; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .recv-btn { flex: 1; background: #007bff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
+        .send-btn { flex: 1; background: #28a745; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; opacity: 0.5; }
+        .recv-btn { flex: 1; background: #007bff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; opacity: 0.5; }
         .link-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 12px; }
         .link-title { font-weight: bold; font-size: 16px; display: block; margin-bottom: 5px; }
         .link-url-display { font-size: 11px; color: #888; word-break: break-all; display: block; background: #f9f9f9; padding: 5px; border-radius: 4px; margin-bottom: 10px; }
         .open-btn { background: #e50914; color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold; display: inline-block; }
-
-        /* 編集パネル（パスワード後に出現） */
         #edit-panel { display: none; background: #fffbe6; padding: 15px; border: 2px dashed #ffe58f; border-radius: 10px; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
-        
         .tab-content { display: none; flex-direction: column; }
         .tab-content.active { display: flex !important; }
-        .edit-item { border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin-bottom: 10px; background: white; }
     </style>
 </head>
 <body>
@@ -47,23 +39,17 @@
 </header>
 
 <div class="container">
-    <!-- 同期ボタン（常に表示） -->
     <div class="sync-area">
-        <button onclick="pullFromCloud()" class="recv-btn">🔄 クラウドから受信</button>
-        <button onclick="showSyncAlert()" class="send-btn">☁️ クラウドに送信</button>
+        <button id="recv-btn" onclick="pullFromCloud()" class="recv-btn" disabled>受信（準備中...）</button>
+        <button id="send-btn" onclick="showSyncAlert()" class="send-btn" disabled>送信（準備中...）</button>
     </div>
 
-    <!-- 編集パネル（管理モード時のみ表示） -->
     <div id="edit-panel">
         <h4 style="margin-top:0;">新規追加（送信ボタンで確定）</h4>
         <input type="text" id="new-title" placeholder="タイトルを入力">
         <input type="text" id="new-url" placeholder="YouTube URLを入力">
-        
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
-        <div id="edit-list-area">
-            <h4>登録済みデータの削除</h4>
-            <div id="edit-list-container"></div>
-        </div>
+        <div id="edit-list-container"></div>
     </div>
 
     <div id="keio" class="tab-content"></div>
@@ -92,6 +78,16 @@
         if (typeof firebase !== 'undefined') {
             firebase.initializeApp(firebaseConfig);
             database = firebase.database();
+            
+            // 接続完了後にボタンを有効化
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById('send-btn').style.opacity = "1";
+            document.getElementById('send-btn').innerText = "☁️ クラウドに送信";
+            
+            document.getElementById('recv-btn').disabled = false;
+            document.getElementById('recv-btn').style.opacity = "1";
+            document.getElementById('recv-btn').innerText = "🔄 クラウドから受信";
+
             pullFromCloud(true);
             changeTab('keio');
         } else {
@@ -104,7 +100,6 @@
         database.ref('links').once('value').then(function(snapshot) {
             localData = snapshot.val() || { keio: [], jr: [], other: [] };
             renderDisplay(localData);
-            if(isAdmin) renderEditList();
             if(!isInitial) alert("最新データを受信しました！");
         }).catch(function(e) { alert("受信失敗: " + e.message); });
     }
@@ -118,17 +113,18 @@
     }
 
     function pushToCloud() {
+        if (!database) return alert("接続準備中です");
         var t = document.getElementById('new-title').value.trim();
         var u = document.getElementById('new-url').value.trim();
-        
         if(!t || !u) return alert("タイトルとURLを入力してください");
 
+        if(!localData[currentTab]) localData[currentTab] = [];
         localData[currentTab].push({title: t, url: u});
+
         database.ref('links').set(localData).then(function() {
             document.getElementById('new-title').value = '';
             document.getElementById('new-url').value = '';
             renderDisplay(localData);
-            renderEditList();
             alert("クラウドに送信しました！");
         });
     }
@@ -148,32 +144,12 @@
         });
     }
 
-    function renderEditList() {
-        var container = document.getElementById('edit-list-container');
-        container.innerHTML = '';
-        var list = localData[currentTab] || [];
-        list.forEach(function(item, index) {
-            var div = document.createElement('div');
-            div.className = 'edit-item';
-            div.innerHTML = `<div style="font-size:13px; font-weight:bold;">${item.title}</div><button onclick="deleteItem(${index})" style="background:#dc3545; color:white; border:none; padding:5px; border-radius:3px; cursor:pointer; margin-top:5px;">削除</button>`;
-            container.appendChild(div);
-        });
-    }
-
-    function deleteItem(index) {
-        if(!confirm("削除しますか？（送信ボタンを押すとクラウドに反映されます）")) return;
-        localData[currentTab].splice(index, 1);
-        renderDisplay(localData);
-        renderEditList();
-    }
-
     function changeTab(id) {
         currentTab = id;
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('btn-' + id).classList.add('active');
-        if(isAdmin) renderEditList();
     }
 
     function askPassword() {
@@ -183,13 +159,11 @@
             document.getElementById('btn-lock').innerText = '⚙️';
             return;
         }
-        // パスワード入力を伏せ字にするために、一時的な入力ダイアログを作成
-        var pass = prompt("パスワードを入力してください（入力した文字は見えません）");
+        var pass = prompt("パスワードを入力してください");
         if (pass === "0829") {
             isAdmin = true;
             document.getElementById('edit-panel').style.display = 'block';
             document.getElementById('btn-lock').innerText = '🔓';
-            renderEditList();
         } else if (pass !== null) {
             alert("パスワードが違います");
         }
