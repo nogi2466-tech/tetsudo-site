@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RailStream - 鉄道動画同期システム</title>
-    <!-- Firebaseライブラリを最優先で読み込み -->
+    <title>RailStream - 自動同期</title>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
@@ -19,11 +18,11 @@
         h2 { border-left: 5px solid var(--primary-blue); padding-left: 15px; color: var(--primary-blue); margin-bottom: 20px; font-size: 20px; }
         .url-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0; text-align: left; }
         .url-item a { color: var(--primary-blue); text-decoration: none; font-weight: bold; font-size: 16px; }
-        .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-size: 16px; margin-top: 10px; transition: 0.2s; }
-        .btn-main:disabled { background: #ccc !important; cursor: not-allowed; opacity: 0.7; }
+        .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-size: 16px; margin-top: 10px; }
         .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #eee; margin-right: 8px; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         .clock-container { background: #e1f5fe; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        .status-badge { font-size: 11px; color: #4caf50; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -34,36 +33,33 @@
     <button onclick="showPage('all')" id="nav-all" class="active">すべて</button>
     <button onclick="showPage('keio')" id="nav-keio">京王</button>
     <button onclick="showPage('jr')" id="nav-jr">JR</button>
-    <button onclick="showPage('settings')" id="nav-settings">同期・設定</button>
+    <button onclick="showPage('settings')" id="nav-settings">追加・設定</button>
 </nav>
 
-<section id="all" class="active"><h2>すべての動画</h2><div id="list-all"></div></section>
-<section id="keio"><h2 style="border-left-color: var(--keio-red); color: var(--keio-red);">京王線</h2><div id="list-keio"></div></section>
-<section id="jr"><h2 style="border-left-color: var(--jr-green); color: var(--jr-green);">JR線</h2><div id="list-jr"></div></section>
+<section id="all" class="active"><h2>すべての動画 <span id="status-all" class="status-badge"></span></h2><div id="list-all"></div></section>
+<section id="keio"><h2>京王線</h2><div id="list-keio"></div></section>
+<section id="jr"><h2>JR線</h2><div id="list-jr"></div></section>
 
 <section id="settings">
-    <h2>設定・同期</h2>
+    <h2>動画を追加 (自動同期)</h2>
     <div class="clock-container">
         <div id="date" style="font-size:12px; color:#666;"></div>
         <div id="time" style="font-size:24px; font-weight:bold; color:var(--primary-blue);">00:00:00</div>
     </div>
 
     <div style="background:#fdfdfd; padding:20px; border-radius:10px; border:1px solid #eee;">
-        <h3>動画を追加</h3>
         <select id="new-cat"><option value="keio">京王</option><option value="jr">JR</option></select>
         <input type="text" id="new-title" placeholder="タイトルを入力">
         <input type="text" id="new-url" placeholder="URL (https://...)">
-        <button class="btn-main" onclick="addItem()">リストに追加</button>
+        <button id="add-btn" class="btn-main" onclick="autoAdd()" disabled>接続中...</button>
     </div>
 
     <hr style="margin:30px 0; border:none; border-top:1px solid #eee;">
-    <button id="sync-s" class="btn-main" style="background:#4caf50;" onclick="syncSave()" disabled>接続中...</button>
-    <button id="sync-l" class="btn-main" style="background:#666;" onclick="syncLoad()" disabled>接続中...</button>
-    <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">初期化</button>
+    <p style="font-size:12px; color:#999; text-align:center;">※このサイトでは、追加した内容は自動で全デバイスに同期されます。</p>
+    <button class="btn-main" style="background:#999; margin-top:20px;" onclick="autoClear()">全データを初期化</button>
 </section>
 
 <script>
-    // 1. Firebase設定
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "://firebaseapp.com",
@@ -75,60 +71,77 @@
     };
 
     let db = null;
-    let myRailItems = JSON.parse(localStorage.getItem('railItems') || '[]');
 
-    // 2. 起動処理：ライブラリが読み込まれるまで待機し、確実にボタンを有効化する
-    function startApp() {
+    // --- 自動同期の仕組み ---
+    function startAutoSync() {
         if (typeof firebase !== 'undefined' && firebase.database) {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             db = firebase.database();
-            
-            // ボタンのロック解除
-            const sBtn = document.getElementById('sync-s');
-            const lBtn = document.getElementById('sync-l');
-            if(sBtn) { sBtn.disabled = false; sBtn.innerText = "今のデータを保存 (送信)"; }
-            if(lBtn) { lBtn.disabled = false; lBtn.innerText = "最新のデータを読込 (受信)"; }
-            
-            render();
-            console.log("System Ready");
+
+            // クラウドのデータに変更があったら、自動で画面を書き換える命令
+            db.ref('auto_rail_list').on('value', (snapshot) => {
+                const data = snapshot.val() || [];
+                render(data);
+                console.log("Auto-synced with Cloud");
+                
+                // ボタンを有効化
+                const addBtn = document.getElementById('add-btn');
+                if(addBtn) { addBtn.disabled = false; addBtn.innerText = "データを追加して同期"; }
+                document.getElementById('status-all').innerText = "● 同期済み";
+            });
         } else {
-            setTimeout(startApp, 1000); // 1秒ごとにチェック
+            setTimeout(startAutoSync, 1000);
         }
     }
-    window.onload = startApp;
+    window.onload = startAutoSync;
 
-    // 3. 時計機能
-    function updateClock() {
-        const now = new Date();
-        const d = document.getElementById('date'), t = document.getElementById('time');
-        if(d) d.innerText = now.toLocaleDateString('ja-JP');
-        if(t) t.innerText = now.toLocaleTimeString('ja-JP');
+    // 動画を追加（追加した瞬間にクラウドへ送信）
+    function autoAdd() {
+        const title = document.getElementById('new-title').value, url = document.getElementById('new-url').value, cat = document.getElementById('new-cat').value;
+        if(!title || !url) return alert("入力してください");
+
+        // 今のデータを一旦取得して新しいのを混ぜる
+        db.ref('auto_rail_list').once('value').then((snap) => {
+            const list = snap.val() || [];
+            list.push({title, url, cat});
+            // クラウドへ上書き（これで全デバイスが自動更新される）
+            db.ref('auto_rail_list').set(list).then(() => {
+                document.getElementById('new-title').value = "";
+                document.getElementById('new-url').value = "";
+                alert("追加しました！他のデバイスも自動更新されます。");
+            });
+        });
     }
-    setInterval(updateClock, 1000); updateClock();
 
-    // 4. 画面切り替え
-    function showPage(id) {
-        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.getElementById('nav-' + id).classList.add('active');
+    // 動画を削除（削除した瞬間にクラウドへ反映）
+    function autoDelete(index) {
+        if(!confirm("削除しますか？")) return;
+        db.ref('auto_rail_list').once('value').then((snap) => {
+            const list = snap.val() || [];
+            list.splice(index, 1);
+            db.ref('auto_rail_list').set(list);
+        });
     }
 
-    // 5. リスト表示
-    function render() {
+    function autoClear() {
+        if(confirm("全データを削除しますか？")) db.ref('auto_rail_list').set([]);
+    }
+
+    // --- 画面表示 ---
+    function render(data) {
         ['all', 'keio', 'jr'].forEach(id => {
             const el = document.getElementById('list-' + id);
             if(el) el.innerHTML = "";
         });
 
-        myRailItems.forEach((item, index) => {
+        data.forEach((item, index) => {
             const html = `
                 <div class="url-item">
                     <div>
                         <span class="tag">${item.cat.toUpperCase()}</span>
                         <a href="${item.url}" target="_blank">${item.title}</a>
                     </div>
-                    <button onclick="delItem(${index})" style="color:#ff5252; border:none; background:none; cursor:pointer;">[削除]</button>
+                    <button onclick="autoDelete(${index})" style="color:#ff5252; border:none; background:none; cursor:pointer;">[削除]</button>
                 </div>`;
             
             document.getElementById('list-all').innerHTML += html;
@@ -137,41 +150,20 @@
         });
     }
 
-    // 6. データ操作
-    function addItem() {
-        const title = document.getElementById('new-title').value, url = document.getElementById('new-url').value, cat = document.getElementById('new-cat').value;
-        if(!title || !url) return alert("入力してください");
-        myRailItems.push({title, url, cat});
-        saveLocal();
-        document.getElementById('new-title').value = ""; document.getElementById('new-url').value = "";
-        alert("リストに追加しました（送信ボタンで同期してください）");
+    function showPage(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('nav-' + id).classList.add('active');
     }
 
-    function delItem(i) { if(confirm("削除しますか？")) { myRailItems.splice(i, 1); saveLocal(); } }
-    function saveLocal() { localStorage.setItem('railItems', JSON.stringify(myRailItems)); render(); }
-    function clearAll() { if(confirm("初期化しますか？")) { myRailItems = []; saveLocal(); } }
-
-    // 7. 同期機能
-    function syncSave() {
-        if(!db) return;
-        db.ref('rail_sync').set(myRailItems)
-            .then(() => alert("クラウドに送信（保存）しました！"))
-            .catch(e => alert("送信エラー: " + e.message));
+    function updateClock() {
+        const now = new Date();
+        const d = document.getElementById('date'), t = document.getElementById('time');
+        if(d) d.innerText = now.toLocaleDateString('ja-JP');
+        if(t) t.innerText = now.toLocaleTimeString('ja-JP');
     }
-
-    function syncLoad() {
-        if(!db) return;
-        db.ref('rail_sync').once('value').then(snap => {
-            const data = snap.val();
-            if(data) {
-                myRailItems = data;
-                saveLocal();
-                alert("クラウドから受信（読込）しました！");
-            } else {
-                alert("クラウドにデータがありません");
-            }
-        }).catch(e => alert("受信エラー: " + e.message));
-    }
+    setInterval(updateClock, 1000); updateClock();
 </script>
 </body>
 </html>
