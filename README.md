@@ -2,181 +2,143 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鉄道ポータル - クラウド同期</title>
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
+    <title>tetsudo</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 80px; color: #333; }
-        header { background: #333; color: white; padding: 20px; text-align: center; }
-        nav { display: flex; justify-content: center; gap: 8px; background: white; padding: 10px; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 1000; }
-        .nav-btn { border: 1px solid #ddd; background: white; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-        .nav-btn.active { background: #e50914; color: white; border-color: #e50914; }
-        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .logo { font-size: 48px; font-weight: bold; }
+        .datetime { text-align: right; font-size: 14px; }
+        .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .nav-tabs button { padding: 10px 20px; border: 2px solid #000; background: #fff; cursor: pointer; font-size: 18px; }
+        .nav-tabs button.active { border-color: red; color: red; }
+        
+        .content-section { display: none; border: 2px solid #000; min-height: 300px; padding: 20px; margin: 0 auto; max-width: 500px; }
+        .content-section.active { display: block; }
 
-        /* 同期キー入力エリア（パスワードなしで表示） */
-        .sync-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .sync-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; display: block; }
-        .sync-input-row { display: flex; gap: 8px; }
-        .sync-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-        .sync-btn { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-
-        /* 管理パネル（パスワード 0829 で表示） */
-        #edit-panel { display: none; background: #fffbe6; padding: 20px; border: 2px dashed #ffe58f; border-radius: 12px; margin-bottom: 20px; }
-        .input-row { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .save-btn { background: #28a745; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-
-        .link-item { background: white; border: 1px solid #eee; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .open-btn { background: #e50914; color: white; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .setting-form { display: flex; flex-direction: column; gap: 15px; align-items: center; }
+        input { padding: 10px; width: 80%; border: 2px solid #000; font-size: 16px; }
+        .btn-add { padding: 10px 40px; background: #eee; border: 2px solid #000; cursor: pointer; }
+        
+        .url-list { list-style: none; padding: 0; text-align: left; }
+        .url-list li { margin: 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        .url-list a { text-decoration: none; color: blue; }
     </style>
 </head>
 <body>
 
-<header><h1>鉄道動画ポータル</h1></header>
-
-<nav>
-    <button onclick="changeTab('keio')" id="btn-keio" class="nav-btn">京王線</button>
-    <button onclick="changeTab('jr')" id="btn-jr" class="nav-btn">JR</button>
-    <button onclick="changeTab('other')" id="btn-other" class="nav-btn">その他</button>
-    <button onclick="askPassword()" id="btn-lock" class="nav-btn">⚙️</button>
-</nav>
-
-<div class="container">
-    <!-- 同期キーエリア：パスワードなしで常時表示 -->
-    <div class="sync-card">
-        <label class="sync-label">🔄 同期キー（合言葉）を入力して開始</label>
-        <div class="sync-input-row">
-            <input type="text" id="sync-key" class="sync-input" placeholder="例：123456789wo">
-            <button onclick="connectSync()" class="sync-btn">同期</button>
+    <div class="header">
+        <div class="logo">tetsudo</div>
+        <div class="datetime">
+            <div id="date">日付を表示</div>
+            <div id="time">時間を表示</div>
         </div>
     </div>
 
-    <!-- 管理用：パスワード 0829 のときだけ表示 -->
-    <div id="edit-panel">
-        <h4 style="margin:0 0 10px 0; color: #856404;">➕ 新規追加</h4>
-        <div class="input-row">
-            <input type="text" id="new-title" placeholder="動画のタイトル">
-            <input type="text" id="new-url" placeholder="YouTube URL">
-            <button onclick="saveItem()" class="save-btn">クラウドに保存</button>
-        </div>
-        <button onclick="resetData()" style="width:100%; margin-top:15px; background:#777; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer;">全データ初期化</button>
+    <div class="nav-tabs">
+        <button onclick="showTab('keio')" id="btn-keio">京王</button>
+        <button onclick="showTab('jr')" id="btn-jr">JR</button>
+        <button onclick="showTab('other')" id="btn-other">その他</button>
+        <button onclick="showTab('setting')" id="btn-setting">設定</button>
     </div>
 
-    <div id="keio" class="tab-content"></div>
-    <div id="jr" class="tab-content"></div>
-    <div id="other" class="tab-content"></div>
-</div>
+    <!-- 各カテゴリの表示エリア -->
+    <div id="keio" class="content-section active"><h2>京王 URL一覧</h2><ul class="url-list" id="list-keio"></ul></div>
+    <div id="jr" class="content-section"><h2>JR URL一覧</h2><ul class="url-list" id="list-jr"></ul></div>
+    <div id="other" class="content-section"><h2>その他 URL一覧</h2><ul class="url-list" id="list-other"></ul></div>
 
-<script>
-    var currentTab = 'keio';
-    var isAdmin = false;
-    var database = null;
-    var currentSyncKey = "";
-    var localData = { keio: [], jr: [], other: [] };
-
-    const config = {
-        apiKey: "AIzaSyAe_KxKH-06cxEOJ0GCtCEnM2xqjMcr-Rc",
-        databaseURL: "https://firebaseio.com",
-        projectId: "tetsudo"
-    };
-
-    function initApp() {
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(config);
-            database = firebase.database();
-            
-            const savedKey = localStorage.getItem('last_sync_key');
-            if (savedKey) {
-                document.getElementById('sync-key').value = savedKey;
-                connectSync(true);
-            }
-        } else {
-            setTimeout(initApp, 500);
-        }
-        changeTab('keio');
-    }
-
-    function connectSync(isInitial = false) {
-        const key = document.getElementById('sync-key').value.trim();
-        if (!key) return alert("同期キーを入れてね");
-
-        currentSyncKey = key;
-        localStorage.setItem('last_sync_key', key);
-
-        database.ref('user_sync/' + key).on('value', function(snapshot) {
-            localData = snapshot.val() || { keio: [], jr: [], other: [] };
-            render();
-        });
+    <!-- 設定エリア（パスワードが必要） -->
+    <div id="setting" class="content-section">
+        <div id="password-area">
+            <p>パスワードを入力</p>
+            <input type="password" id="pw-input">
+            <button class="btn-add" style="margin-top:10px" onclick="checkPassword()">認証</button>
+        </div>
         
-        if (!isInitial) alert("合言葉「" + key + "」で同期しました");
-    }
+        <div id="add-url-area" style="display:none;">
+            <h3>URLを追加</h3>
+            <select id="category-select" style="margin-bottom:10px; padding:5px;">
+                <option value="keio">京王</option>
+                <option value="jr">JR</option>
+                <option value="other">その他</option>
+            </select>
+            <input type="text" id="title-input" placeholder="タイトルを入力">
+            <input type="text" id="url-input" placeholder="URLを入力">
+            <button class="btn-add" onclick="addUrl()">追加</button>
+            <button onclick="logout()" style="margin-top:20px; border:none; background:none; cursor:pointer; color:gray;">ログアウト</button>
+        </div>
+    </div>
 
-    function saveItem() {
-        if (!currentSyncKey) return alert("先に「同期キー」を入力してね");
-        var t = document.getElementById('new-title').value.trim();
-        var u = document.getElementById('new-url').value.trim();
-        if(!t || !u) return alert("タイトルとURLを入力してね");
-
-        localData[currentTab].push({title: t, url: u});
-        database.ref('user_sync/' + currentSyncKey).set(localData).then(function() {
-            document.getElementById('new-title').value = '';
-            document.getElementById('new-url').value = '';
-            alert("クラウドに保存完了！");
-        });
-    }
-
-    function render() {
-        ['keio', 'jr', 'other'].forEach(function(tab) {
-            var container = document.getElementById(tab);
-            container.innerHTML = '';
-            if (localData[tab]) {
-                localData[tab].forEach(function(item, index) {
-                    container.innerHTML += `
-                        <div class="link-item">
-                            <span style="font-weight:bold;">${item.title}</span>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <a href="${item.url}" target="_blank" class="open-btn">開く</a>
-                                ${isAdmin ? `<button onclick="deleteItem('${tab}',${index})" style="border:none; color:red; background:none; cursor:pointer; font-size:18px;">×</button>` : ''}
-                            </div>
-                        </div>`;
-                });
-            }
-        });
-    }
-
-    function deleteItem(tab, idx) {
-        if (!confirm("削除する？")) return;
-        localData[tab].splice(idx, 1);
-        database.ref('user_sync/' + currentSyncKey).set(localData);
-    }
-
-    function resetData() {
-        if (!confirm("この合言葉のデータを全部消す？")) return;
-        localData = { keio: [], jr: [], other: [] };
-        database.ref('user_sync/' + currentSyncKey).set(localData);
-    }
-
-    function changeTab(id) {
-        currentTab = id;
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('btn-' + id).classList.add('active');
-    }
-
-    function askPassword() {
-        if (isAdmin) { isAdmin = false; document.getElementById('edit-panel').style.display = 'none'; return; }
-        if (prompt("パスワード") === "0829") {
-            isAdmin = true;
-            document.getElementById('edit-panel').style.display = 'block';
-            render();
+    <script>
+        // 日時更新
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('date').innerText = now.toLocaleDateString();
+            document.getElementById('time').innerText = now.toLocaleTimeString();
         }
-    }
+        setInterval(updateTime, 1000);
+        updateTime();
 
-    initApp();
-</script>
+        // タブ切り替え
+        function showTab(tabId) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+        }
+
+        // パスワードチェック
+        function checkPassword() {
+            const pw = document.getElementById('pw-input').value;
+            if (pw === "0829") {
+                document.getElementById('password-area').style.display = 'none';
+                document.getElementById('add-url-area').style.display = 'block';
+            } else {
+                alert("パスワードが違います");
+            }
+        }
+
+        function logout() {
+            document.getElementById('pw-input').value = "";
+            document.getElementById('password-area').style.display = 'block';
+            document.getElementById('add-url-area').style.display = 'none';
+        }
+
+        // URL追加と保存
+        function addUrl() {
+            const cat = document.getElementById('category-select').value;
+            const title = document.getElementById('title-input').value;
+            const url = document.getElementById('url-input').value;
+
+            if (!title || !url) return alert("入力してください");
+
+            const data = JSON.parse(localStorage.getItem('tetsudo_urls') || '[]');
+            data.push({ cat, title, url });
+            localStorage.setItem('tetsudo_urls', JSON.stringify(data));
+
+            document.getElementById('title-input').value = "";
+            document.getElementById('url-input').value = "";
+            renderUrls();
+            alert("追加しました");
+        }
+
+        // 一覧表示
+        function renderUrls() {
+            const data = JSON.parse(localStorage.getItem('tetsudo_urls') || '[]');
+            const lists = { keio: 'list-keio', jr: 'list-jr', other: 'list-other' };
+            
+            // 一旦クリア
+            Object.values(lists).forEach(id => document.getElementById(id).innerHTML = "");
+
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="${item.url}" target="_blank">${item.title}</a>`;
+                document.getElementById(lists[item.cat]).appendChild(li);
+            });
+        }
+
+        // 初期表示
+        renderUrls();
+        showTab('keio');
+    </script>
 </body>
 </html>
