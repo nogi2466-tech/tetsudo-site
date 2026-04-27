@@ -99,9 +99,11 @@
     </div>
 </div>
 
-<!-- Firebase 本体ライブラリ（確実に動作するv8を使用） -->
+<!-- ここを最新の読み込み方法に差し替え -->
 <script src="https://gstatic.com"></script>
 <script src="https://gstatic.com"></script>
+<script src="https://gstatic.com"></script>
+
 
 <script>
     // 1. 時計機能（Firebaseの読み込み成否に関わらず動作）
