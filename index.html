@@ -68,6 +68,7 @@
 </div>
 
 <script>
+    // --- 1. 時計 ---
     function updateClock() {
         const n = new Date();
         document.getElementById('date').innerText = n.toLocaleDateString('ja-JP');
@@ -76,10 +77,11 @@
     setInterval(updateClock, 1000);
     updateClock();
 
+    // --- 2. Firebase設定 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "://firebaseapp.com",
-        databaseURL: "https://tetsudo-default-rtdb.firebaseio.com",
+        databaseURL: "https://firebaseio.com",
         projectId: "tetsudo",
         storageBucket: "tetsudo.firebasestorage.app",
         messagingSenderId: "91814902933",
@@ -89,26 +91,33 @@
     let db = null;
     let allData = {};
 
-    if (typeof firebase !== 'undefined') {
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        db.ref('urls').on('value', (snap) => {
-            allData = snap.val() || {};
-            // ページ読み込み時は「すべて」を表示
-            const activeBtn = document.querySelector('.filter-btn.active');
-            const currentCat = activeBtn.innerText === 'すべて' ? 'all' : activeBtn.innerText.toLowerCase();
-            render('all'); 
-        });
-    }
+    // 接続状態をチェックする関数
+    function initFirebase() {
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
 
+            // データのリアルタイム受信
+            db.ref('urls').on('value', (snap) => {
+                allData = snap.val() || {};
+                render('all');
+                console.log("Firebase Connected!");
+            }, (error) => {
+                console.error("Database error:", error);
+            });
+        } else {
+            // 読み込めていない場合は1秒後に再試行
+            setTimeout(initFirebase, 1000);
+        }
+    }
+    initFirebase();
+
+    // --- 3. 表示処理 ---
     function render(filter) {
         const list = document.getElementById('main-list');
         list.innerHTML = "";
-        
-        // すべての項目を表示するロジック
         Object.keys(allData).forEach(key => {
             const item = allData[key];
-            // フィルタが 'all' の時はすべて通す、それ以外の時はカテゴリが一致するものだけ
             if(filter !== 'all' && item.cat !== filter) return;
             
             const card = document.createElement('div');
@@ -123,6 +132,7 @@
         });
     }
 
+    // --- 4. 操作 ---
     function filterCat(cat, btn) {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -136,22 +146,24 @@
     }
 
     function login() {
-        // 入力された値をチェックし、すぐ消去することで露出を防ぐ
         const inputPass = document.getElementById('pass').value;
         if(inputPass === "0829") {
             document.getElementById('admin-login').style.display = 'none';
             document.getElementById('admin-tools').style.display = 'block';
             document.body.classList.add('admin-mode');
-            document.getElementById('pass').value = ""; // 入力値を消去
-            alert("管理者としてログインしました");
+            document.getElementById('pass').value = "";
         } else { 
             alert("パスワードが違います");
-            document.getElementById('pass').value = "";
         }
     }
 
     function addVideo() {
-        if (!db) return alert("接続中...");
+        // dbがまだ準備中の場合は待機を促す
+        if (!db) {
+            alert("まだ接続の準備ができていません。数秒待ってからやり直してください。");
+            return;
+        }
+
         const cat = document.getElementById('cat').value;
         const title = document.getElementById('title').value;
         const url = document.getElementById('url').value;
@@ -161,12 +173,15 @@
             alert("保存しました！");
             document.getElementById('title').value = "";
             document.getElementById('url').value = "";
+        }).catch(err => {
+            alert("エラーが発生しました: " + err.message);
         });
     }
 
     function delVideo(key) {
-        if(confirm("この動画を消去しますか？")) db.ref('urls/' + key).remove();
+        if(confirm("消去しますか？")) db.ref('urls/' + key).remove();
     }
 </script>
+
 </body>
 </html>
