@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RailStream - 鉄道動画集</title>
-    <!-- Firebaseライブラリ -->
+    <title>RailStream</title>
+
+    <!-- Firebaseライブラリ (最優先で読み込み) -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
@@ -15,7 +16,6 @@
         header { background: linear-gradient(135deg, #0078d4, #00b0ff); color: white; padding: 25px 10px; text-align: center; }
         h1 { margin: 0; font-size: 24px; letter-spacing: 2px; }
 
-        /* 5つのナビゲーションボタン */
         nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; overflow-x: auto; white-space: nowrap; }
         nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 12px; cursor: pointer; color: #555; border-radius: 20px; transition: 0.3s; }
         nav button.active { background: var(--primary-blue); color: white; font-weight: bold; }
@@ -25,14 +25,12 @@
         
         h2 { border-left: 5px solid var(--primary-blue); padding-left: 15px; color: var(--primary-blue); margin-bottom: 25px; font-size: 20px; }
 
-        /* URLリスト */
-        .url-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0; }
+        .url-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0; text-align: left; }
         .url-item a { color: var(--primary-blue); text-decoration: none; font-weight: bold; font-size: 16px; }
-        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #eee; margin-right: 8px; vertical-align: middle; }
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #eee; margin-right: 8px; }
         .del-text { color: var(--accent-red); font-size: 12px; cursor: pointer; border: none; background: none; }
 
-        /* 入力フォーム */
-        .input-area { background: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-top: 20px; }
+        .input-area { background: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; margin-top: 20px; text-align: left; }
         input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
         .btn-main { background: var(--primary-blue); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-size: 16px; }
 
@@ -51,58 +49,31 @@
         <button onclick="showPage('settings')" id="nav-settings">設定</button>
     </nav>
 
-    <!-- すべて表示タブ -->
-    <section id="all" class="active">
-        <h2>すべての動画</h2>
-        <div id="list-all"></div>
-    </section>
+    <section id="all" class="active"><h2>すべての動画</h2><div id="list-all"></div></section>
+    <section id="keio"><h2 style="border-left-color: var(--keio-red); color: var(--keio-red);">京王線</h2><div id="list-keio"></div></section>
+    <section id="jr"><h2 style="border-left-color: var(--jr-green); color: var(--jr-green);">JR線</h2><div id="list-jr"></div></section>
+    <section id="other"><h2>その他</h2><div id="list-other"></div></section>
 
-    <!-- 京王タブ -->
-    <section id="keio">
-        <h2 style="border-left-color: var(--keio-red); color: var(--keio-red);">京王線</h2>
-        <div id="list-keio"></div>
-    </section>
-
-    <!-- JRタブ -->
-    <section id="jr">
-        <h2 style="border-left-color: var(--jr-green); color: var(--jr-green);">JR線</h2>
-        <div id="list-jr"></div>
-    </section>
-
-    <!-- その他タブ -->
-    <section id="other">
-        <h2 style="border-left-color: #333; color: #333;">その他</h2>
-        <div id="list-other"></div>
-    </section>
-
-    <!-- 設定タブ -->
     <section id="settings">
         <h2>設定・同期</h2>
         <div class="clock-container">
-            <div id="date" style="font-size:12px;"></div>
+            <div id="date" style="font-size:12px; color:#666;"></div>
             <div id="time" style="font-size:24px; font-weight:bold; color:var(--primary-blue);">00:00:00</div>
         </div>
-
         <div class="input-area">
             <h3>動画を追加</h3>
-            <select id="new-cat">
-                <option value="keio">京王</option>
-                <option value="jr">JR</option>
-                <option value="other">その他</option>
-            </select>
+            <select id="new-cat"><option value="keio">京王</option><option value="jr">JR</option><option value="other">その他</option></select>
             <input type="text" id="new-title" placeholder="動画のタイトル">
             <input type="text" id="new-url" placeholder="https://...">
             <button class="btn-main" onclick="addItem()">リストに追加</button>
         </div>
-
         <hr style="margin:30px 0; border:none; border-top:1px solid #eee;">
         <button class="btn-main" style="background:#4caf50;" onclick="syncSave()">今のデータを保存 (送信)</button>
         <button class="btn-main" style="background:#666; margin-top:10px;" onclick="syncLoad()">最新のデータを読込 (受信)</button>
         <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">初期化</button>
     </section>
 
-    <script>
-    // 1. 基本設定
+<script>
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "://firebaseapp.com",
@@ -116,17 +87,19 @@
     let db = null;
     let myRailItems = JSON.parse(localStorage.getItem('railItems') || '[]');
 
-    // 2. 起動時の処理（Firebaseが読み込まれるのを待つ）
-    window.onload = function() {
+    // Firebase接続を確実にするためのループ
+    function connectFirebase() {
         if (typeof firebase !== 'undefined') {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             db = firebase.database();
             console.log("Firebase Ready");
+            render(); 
+        } else {
+            setTimeout(connectFirebase, 1000);
         }
-        render();
-    };
+    }
+    connectFirebase();
 
-    // 3. 時計
     function updateClock() {
         const now = new Date();
         const d = document.getElementById('date'), t = document.getElementById('time');
@@ -135,7 +108,6 @@
     }
     setInterval(updateClock, 1000); updateClock();
 
-    // 4. ページ切り替え
     function showPage(id) {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
@@ -143,54 +115,30 @@
         document.getElementById('nav-' + id).classList.add('active');
     }
 
-    // 5. リスト表示・操作
     function render() {
         const lists = { all: 'list-all', keio: 'list-keio', jr: 'list-jr', other: 'list-other' };
-        Object.values(lists).forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.innerHTML = "";
-        });
+        Object.values(lists).forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = ""; });
 
         myRailItems.forEach((item, index) => {
-            const html = `
-                <div class="url-item">
-                    <div>
-                        <span class="tag">${item.cat.toUpperCase()}</span>
-                        <a href="${item.url}" target="_blank">${item.title}</a>
-                    </div>
-                    <button class="del-text" onclick="delItem(${index})">[削除]</button>
-                </div>`;
-            
+            const html = `<div class="url-item"><div><span class="tag">${item.cat.toUpperCase()}</span><a href="${item.url}" target="_blank">${item.title}</a></div><button class="del-text" onclick="delItem(${index})">[削除]</button></div>`;
             if(document.getElementById('list-all')) document.getElementById('list-all').innerHTML += html;
-            const targetList = document.getElementById(lists[item.cat]);
-            if (targetList) targetList.innerHTML += html;
+            if(lists[item.cat] && document.getElementById(lists[item.cat])) document.getElementById(lists[item.cat]).innerHTML += html;
         });
     }
 
     function addItem() {
-        const title = document.getElementById('new-title').value;
-        const url = document.getElementById('new-url').value;
-        const cat = document.getElementById('new-cat').value;
+        const title = document.getElementById('new-title').value, url = document.getElementById('new-url').value, cat = document.getElementById('new-cat').value;
         if(!title || !url) return alert("入力してください");
-
         myRailItems.push({title, url, cat});
         saveLocal();
-        document.getElementById('new-title').value = "";
-        document.getElementById('new-url').value = "";
+        document.getElementById('new-title').value = ""; document.getElementById('new-url').value = "";
     }
 
-    function delItem(i) {
-        if(confirm("削除しますか？")) { myRailItems.splice(i, 1); saveLocal(); }
-    }
+    function delItem(i) { if(confirm("削除しますか？")) { myRailItems.splice(i, 1); saveLocal(); } }
+    function saveLocal() { localStorage.setItem('railItems', JSON.stringify(myRailItems)); render(); }
 
-    function saveLocal() {
-        localStorage.setItem('railItems', JSON.stringify(myRailItems));
-        render();
-    }
-
-    // 6. 同期（エラー防止ガード付き）
     function syncSave() {
-        if(!db) return alert("接続中です。もう一度ボタンを押してください。");
+        if(!db) return alert("接続中です。数秒待ってから押し直してください。");
         db.ref('rail_sync').set(myRailItems).then(() => alert("クラウドに送信しました"));
     }
 
@@ -202,10 +150,7 @@
         });
     }
 
-    function clearAll() {
-        if(confirm("すべて消去しますか？")) { myRailItems = []; saveLocal(); }
-    }
+    function clearAll() { if(confirm("すべて消去しますか？")) { myRailItems = []; saveLocal(); } }
 </script>
-
 </body>
 </html>
