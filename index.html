@@ -102,89 +102,110 @@
     </section>
 
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
-            authDomain: "://firebaseapp.com",
-            databaseURL: "https://firebaseio.com",
-            projectId: "tetsudo",
-            storageBucket: "tetsudo.firebasestorage.app",
-            messagingSenderId: "91814902933",
-            appId: "1:91814902933:web:f9a8a3bce73470b842ef9c"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+    // 1. 基本設定
+    const firebaseConfig = {
+        apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
+        authDomain: "://firebaseapp.com",
+        databaseURL: "https://firebaseio.com",
+        projectId: "tetsudo",
+        storageBucket: "tetsudo.firebasestorage.app",
+        messagingSenderId: "91814902933",
+        appId: "1:91814902933:web:f9a8a3bce73470b842ef9c"
+    };
 
-        let myRailItems = JSON.parse(localStorage.getItem('railItems') || '[]');
+    let db = null;
+    let myRailItems = JSON.parse(localStorage.getItem('railItems') || '[]');
 
-        function showPage(id) {
-            document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            document.getElementById('nav-' + id).classList.add('active');
+    // 2. 起動時の処理（Firebaseが読み込まれるのを待つ）
+    window.onload = function() {
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            console.log("Firebase Ready");
         }
+        render();
+    };
 
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('date').innerText = now.toLocaleDateString('ja-JP');
-            document.getElementById('time').innerText = now.toLocaleTimeString('ja-JP');
-        }
-        setInterval(updateClock, 1000); updateClock();
+    // 3. 時計
+    function updateClock() {
+        const now = new Date();
+        const d = document.getElementById('date'), t = document.getElementById('time');
+        if(d) d.innerText = now.toLocaleDateString('ja-JP');
+        if(t) t.innerText = now.toLocaleTimeString('ja-JP');
+    }
+    setInterval(updateClock, 1000); updateClock();
 
-        function render() {
-            const lists = { all: 'list-all', keio: 'list-keio', jr: 'list-jr', other: 'list-other' };
-            Object.values(lists).forEach(id => document.getElementById(id).innerHTML = "");
+    // 4. ページ切り替え
+    function showPage(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('nav-' + id).classList.add('active');
+    }
 
-            myRailItems.forEach((item, index) => {
-                const html = `
-                    <div class="url-item">
-                        <div>
-                            <span class="tag">${item.cat.toUpperCase()}</span>
-                            <a href="${item.url}" target="_blank">${item.title}</a>
-                        </div>
-                        <button class="del-text" onclick="delItem(${index})">[削除]</button>
-                    </div>`;
-                
-                document.getElementById('list-all').innerHTML += html;
-                if (lists[item.cat]) document.getElementById(lists[item.cat]).innerHTML += html;
-            });
-        }
+    // 5. リスト表示・操作
+    function render() {
+        const lists = { all: 'list-all', keio: 'list-keio', jr: 'list-jr', other: 'list-other' };
+        Object.values(lists).forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.innerHTML = "";
+        });
 
-        function addItem() {
-            const title = document.getElementById('new-title').value;
-            const url = document.getElementById('new-url').value;
-            const cat = document.getElementById('new-cat').value;
-            if(!title || !url) return alert("入力してください");
-            myRailItems.push({title, url, cat});
-            saveLocal();
-            document.getElementById('new-title').value = "";
-            document.getElementById('new-url').value = "";
-        }
+        myRailItems.forEach((item, index) => {
+            const html = `
+                <div class="url-item">
+                    <div>
+                        <span class="tag">${item.cat.toUpperCase()}</span>
+                        <a href="${item.url}" target="_blank">${item.title}</a>
+                    </div>
+                    <button class="del-text" onclick="delItem(${index})">[削除]</button>
+                </div>`;
+            
+            if(document.getElementById('list-all')) document.getElementById('list-all').innerHTML += html;
+            const targetList = document.getElementById(lists[item.cat]);
+            if (targetList) targetList.innerHTML += html;
+        });
+    }
 
-        function delItem(i) {
-            if(confirm("削除しますか？")) { myRailItems.splice(i, 1); saveLocal(); }
-        }
+    function addItem() {
+        const title = document.getElementById('new-title').value;
+        const url = document.getElementById('new-url').value;
+        const cat = document.getElementById('new-cat').value;
+        if(!title || !url) return alert("入力してください");
 
-        function saveLocal() {
-            localStorage.setItem('railItems', JSON.stringify(myRailItems));
-            render();
-        }
+        myRailItems.push({title, url, cat});
+        saveLocal();
+        document.getElementById('new-title').value = "";
+        document.getElementById('new-url').value = "";
+    }
 
-        function syncSave() {
-            db.ref('rail_sync').set(myRailItems).then(() => alert("クラウドに送信しました"));
-        }
+    function delItem(i) {
+        if(confirm("削除しますか？")) { myRailItems.splice(i, 1); saveLocal(); }
+    }
 
-        function syncLoad() {
-            db.ref('rail_sync').once('value').then(snap => {
-                const data = snap.val();
-                if(data) { myRailItems = data; saveLocal(); alert("クラウドから読み込みました"); }
-            });
-        }
+    function saveLocal() {
+        localStorage.setItem('railItems', JSON.stringify(myRailItems));
+        render();
+    }
 
-        function clearAll() {
-            if(confirm("すべて消去しますか？")) { myRailItems = []; saveLocal(); }
-        }
+    // 6. 同期（エラー防止ガード付き）
+    function syncSave() {
+        if(!db) return alert("接続中です。もう一度ボタンを押してください。");
+        db.ref('rail_sync').set(myRailItems).then(() => alert("クラウドに送信しました"));
+    }
 
-        window.onload = render;
-    </script>
+    function syncLoad() {
+        if(!db) return alert("接続中です。");
+        db.ref('rail_sync').once('value').then(snap => {
+            const data = snap.val();
+            if(data) { myRailItems = data; saveLocal(); alert("クラウドから読み込みました"); }
+        });
+    }
+
+    function clearAll() {
+        if(confirm("すべて消去しますか？")) { myRailItems = []; saveLocal(); }
+    }
+</script>
+
 </body>
 </html>
