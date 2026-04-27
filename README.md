@@ -60,15 +60,17 @@
 </section>
 
 <script>
-    const firebaseConfig = {
+       const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "://firebaseapp.com",
+        // ★ここを画像にあるURLと完全に一致させました
         databaseURL: "https://firebaseio.com",
         projectId: "tetsudo",
         storageBucket: "tetsudo.firebasestorage.app",
         messagingSenderId: "91814902933",
         appId: "1:91814902933:web:f9a8a3bce73470b842ef9c"
     };
+
 
     let db = null;
 
