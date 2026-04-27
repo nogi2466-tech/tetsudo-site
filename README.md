@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RailStream</title>
-    <!-- Firebaseの読み込み (Head内で最初に行う) -->
+    <title>RailStream - 鉄道動画集</title>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
-    
     <style>
         :root { --main-color: #2c3e50; --accent-color: #e74c3c; --bg-color: #f4f7f6; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg-color); margin: 0; color: #333; }
@@ -29,6 +27,8 @@
         .admin-mode .del-badge { display: block; }
         .settings-panel { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 30px; }
         input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        /* パスワード入力欄を目立たなくする */
+        #pass { background: #fafafa; }
         .btn-action { width: 100%; padding: 15px; border: none; border-radius: 8px; background: var(--main-color); color: white; font-weight: bold; cursor: pointer; font-size: 16px; }
     </style>
 </head>
@@ -48,21 +48,19 @@
         <button class="filter-btn" onclick="toggleSettings()">⚙ 管理</button>
     </div>
     
-    <div class="video-grid" id="main-list">
-        <!-- ここにFirebaseから取得した動画が並びます -->
-    </div>
+    <div class="video-grid" id="main-list"></div>
 
     <div id="settings-area" class="settings-panel" style="display:none;">
         <div id="admin-login">
             <h3>管理者ログイン</h3>
-            <input type="password" id="pass" placeholder="パスワード (0829)">
+            <input type="password" id="pass" placeholder="Passwordを入力してください">
             <button class="btn-action" onclick="login()">ログイン</button>
         </div>
         <div id="admin-tools" style="display:none;">
             <h3>新しい動画を追加</h3>
             <select id="cat"><option value="keio">京王</option><option value="jr">JR</option><option value="other">その他</option></select>
-            <input type="text" id="title" placeholder="タイトル">
-            <input type="text" id="url" placeholder="動画のURL (YouTube等)">
+            <input type="text" id="title" placeholder="タイトルを入力">
+            <input type="text" id="url" placeholder="URLを貼り付け">
             <button class="btn-action" style="background: #27ae60;" onclick="addVideo()">データを保存して追加</button>
             <button class="btn-action" style="background: #ccc; margin-top:20px;" onclick="location.reload()">ログアウト</button>
         </div>
@@ -70,19 +68,17 @@
 </div>
 
 <script>
-    // 1. 時計（最優先）
     function updateClock() {
         const n = new Date();
-        document.getElementById('date').innerText = n.toLocaleDateString('ja-JP').replace(/\//g, '/');
+        document.getElementById('date').innerText = n.toLocaleDateString('ja-JP');
         document.getElementById('time').innerText = n.toLocaleTimeString('ja-JP');
     }
     setInterval(updateClock, 1000);
     updateClock();
 
-    // 2. Firebase初期化（画像の設定値を完全に反映）
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
-        authDomain: "tetsudo.firebaseapp.com",
+        authDomain: "://firebaseapp.com",
         databaseURL: "https://tetsudo-default-rtdb.firebaseio.com",
         projectId: "tetsudo",
         storageBucket: "tetsudo.firebasestorage.app",
@@ -90,34 +86,36 @@
         appId: "1:91814902933:web:f9a8a3bce73470b842ef9c"
     };
 
-    let db;
+    let db = null;
     let allData = {};
 
     if (typeof firebase !== 'undefined') {
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         db = firebase.database();
-        
-        // データのリアルタイム受信
         db.ref('urls').on('value', (snap) => {
             allData = snap.val() || {};
-            render('all');
+            // ページ読み込み時は「すべて」を表示
+            const activeBtn = document.querySelector('.filter-btn.active');
+            const currentCat = activeBtn.innerText === 'すべて' ? 'all' : activeBtn.innerText.toLowerCase();
+            render('all'); 
         });
-    } else {
-        alert("Firebaseの読み込みに失敗しました。ページを再読み込みしてください。");
     }
 
-    // 3. 表示処理
     function render(filter) {
         const list = document.getElementById('main-list');
         list.innerHTML = "";
+        
+        // すべての項目を表示するロジック
         Object.keys(allData).forEach(key => {
             const item = allData[key];
+            // フィルタが 'all' の時はすべて通す、それ以外の時はカテゴリが一致するものだけ
             if(filter !== 'all' && item.cat !== filter) return;
             
             const card = document.createElement('div');
             card.className = `video-card card-${item.cat}`;
             card.innerHTML = `
                 <h3>${item.title}</h3>
+                <span style="font-size: 10px; color: #888;">区分: ${item.cat.toUpperCase()}</span>
                 <a href="${item.url}" target="_blank">▶ 視聴する</a>
                 <button class="del-badge" onclick="delVideo('${key}')">×</button>
             `;
@@ -125,7 +123,6 @@
         });
     }
 
-    // 4. ボタン操作
     function filterCat(cat, btn) {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -139,15 +136,22 @@
     }
 
     function login() {
-        if(document.getElementById('pass').value === "0829") {
+        // 入力された値をチェックし、すぐ消去することで露出を防ぐ
+        const inputPass = document.getElementById('pass').value;
+        if(inputPass === "0829") {
             document.getElementById('admin-login').style.display = 'none';
             document.getElementById('admin-tools').style.display = 'block';
             document.body.classList.add('admin-mode');
-            alert("ログインしました");
-        } else { alert("パスワードが違います"); }
+            document.getElementById('pass').value = ""; // 入力値を消去
+            alert("管理者としてログインしました");
+        } else { 
+            alert("パスワードが違います");
+            document.getElementById('pass').value = "";
+        }
     }
 
     function addVideo() {
+        if (!db) return alert("接続中...");
         const cat = document.getElementById('cat').value;
         const title = document.getElementById('title').value;
         const url = document.getElementById('url').value;
@@ -161,9 +165,7 @@
     }
 
     function delVideo(key) {
-        if(confirm("この動画を一覧から消去しますか？")) {
-            db.ref('urls/' + key).remove();
-        }
+        if(confirm("この動画を消去しますか？")) db.ref('urls/' + key).remove();
     }
 </script>
 </body>
