@@ -2,122 +2,97 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>tetsudo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailStream - 鉄道動画コレクション</title>
     <style>
-        body { font-family: sans-serif; text-align: center; margin: 0; padding: 0; background: #fff; }
+        :root { --main-color: #2c3e50; --accent-color: #e74c3c; --bg-color: #f4f7f6; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg-color); margin: 0; color: #333; }
         
         /* ヘッダー */
-        .top-bar { background: #333; color: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 32px; font-weight: bold; }
-        .datetime { text-align: right; font-size: 16px; font-family: 'Courier New', monospace; line-height: 1.2; }
-        
-        .container { padding: 20px; }
-        .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .nav-tabs button { padding: 10px 20px; border: 2px solid #000; background: #fff; cursor: pointer; font-size: 16px; font-weight: bold; }
-        .nav-tabs button.active { border-color: red; color: red; }
-        
-        .content-section { display: none; padding: 10px; max-width: 600px; margin: 0 auto; text-align: left; }
-        .content-section.active { display: block; }
+        header { background: var(--main-color); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .logo { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
+        .clock { text-align: right; font-family: monospace; font-size: 0.9rem; }
 
-        /* 利用ルール */
-        #rule-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        /* メインコンテンツ */
+        .container { max-width: 900px; margin: 20px auto; padding: 0 15px; }
         
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #000; box-sizing: border-box; font-size: 16px; }
-        .btn-main { background: #eee; border: 2px solid #000; padding: 12px; cursor: pointer; width: 100%; font-weight: bold; font-size: 16px; }
-        .btn-main:hover { background: #ddd; }
-        
-        .url-list { list-style: none; padding: 0; }
-        .url-list li { border-bottom: 1px solid #ccc; padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
-        .url-list a { text-decoration: none; color: blue; font-weight: bold; font-size: 18px; }
-        
-        /* 削除ボタン（管理モード時のみ表示） */
-        .del-btn { color: white; background: red; border: none; padding: 6px 12px; cursor: pointer; font-size: 12px; border-radius: 4px; display: none; }
-        .admin-mode .del-btn { display: inline-block; }
+        /* タブ・フィルタ */
+        .filter-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .filter-btn { padding: 10px 25px; border: none; background: white; border-radius: 30px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.3s; }
+        .filter-btn.active { background: var(--accent-color); color: white; }
+
+        /* リスト表示 */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .video-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; position: relative; border-left: 5px solid #ccc; }
+        .card-keio { border-left-color: #e60012; }
+        .card-jr { border-left-color: #008000; }
+        .card-other { border-left-color: #333; }
+        .video-card h3 { margin: 0 0 10px 0; font-size: 1.1rem; color: var(--main-color); }
+        .video-card a { color: #3498db; text-decoration: none; font-weight: bold; font-size: 0.9rem; }
+        .video-card a:hover { text-decoration: underline; }
+
+        /* 管理用ボタン */
+        .del-badge { position: absolute; top: -10px; right: -10px; background: red; color: white; border: none; width: 25px; height: 25px; border-radius: 50%; cursor: pointer; display: none; font-size: 12px; }
+        .admin-mode .del-badge { display: block; }
+
+        /* 設定エリア */
+        .settings-panel { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 30px; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-action { width: 100%; padding: 15px; border: none; border-radius: 8px; background: var(--main-color); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-action:hover { opacity: 0.9; }
+
+        @media (max-width: 600px) { .video-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-<!-- 利用ルールオーバーレイ -->
-<div id="rule-overlay" style="display:none;">
-    <div style="text-align:center; padding: 20px;">
-        <h2>ご利用ルール</h2>
-        <p>正しく利用することに同意しますか？</p>
-        <label style="font-size: 18px;"><input type="checkbox" id="rule-agree"> 同意する</label><br><br>
-        <button class="btn-main" onclick="acceptRules()">サイトに入る</button>
+<header>
+    <div class="logo">RailStream</div>
+    <div class="clock">
+        <div id="date">----/--/--</div>
+        <div id="time">--:--:--</div>
     </div>
-</div>
-
-<!-- ヘッダー -->
-<div class="top-bar">
-    <div class="logo">tetsudo</div>
-    <div class="datetime">
-        <div id="date">0000/00/00</div>
-        <div id="time">00:00:00</div>
-    </div>
-</div>
+</header>
 
 <div class="container">
-    <!-- タブボタン -->
-    <div class="nav-tabs">
-        <button onclick="showTab('keio')" id="btn-keio">京王</button>
-        <button onclick="showTab('jr')" id="btn-jr">JR</button>
-        <button onclick="showTab('other')" id="btn-other">その他</button>
-        <button onclick="showTab('setting')" id="btn-setting">設定</button>
+    <!-- タブ -->
+    <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterCat('all', this)">すべて</button>
+        <button class="filter-btn" onclick="filterCat('keio', this)">京王</button>
+        <button class="filter-btn" onclick="filterCat('jr', this)">JR</button>
+        <button class="filter-btn" onclick="filterCat('other', this)">その他</button>
+        <button class="filter-btn" onclick="toggleSettings()">⚙ 設定</button>
     </div>
 
-    <!-- 各セクション -->
-    <div id="keio" class="content-section"><h2>京王 一覧</h2><ul class="url-list" id="list-keio"></ul></div>
-    <div id="jr" class="content-section"><h2>JR 一覧</h2><ul class="url-list" id="list-jr"></ul></div>
-    <div id="other" class="content-section"><h2>その他 一覧</h2><ul class="url-list" id="list-other"></ul></div>
+    <!-- 動画一覧 -->
+    <div class="video-grid" id="main-list">
+        <!-- ここに動画が追加されます -->
+    </div>
 
-    <div id="setting" class="content-section">
-        <!-- 管理ログイン -->
-        <div id="admin-auth">
-            <h3>管理ログイン</h3>
-            <p style="font-size: 12px; color: #666;">動画を追加・削除するにはパスワードを入力してください。</p>
-            <input type="password" id="admin-pw" placeholder="パスワードを入力">
-            <button class="btn-main" onclick="authAdmin()">認証</button>
+    <!-- 設定パネル（初期非表示） -->
+    <div id="settings-area" class="settings-panel" style="display:none;">
+        <div id="admin-login">
+            <h3>管理者ログイン</h3>
+            <input type="password" id="pass" placeholder="パスワード (0829)">
+            <button class="btn-action" onclick="login()">ログイン</button>
         </div>
-
-        <!-- 追加パネル（初期状態は非表示） -->
-        <div id="admin-panel" style="display:none; border: 2px dashed #000; padding: 20px; margin-top:10px; background: #f9f9f9;">
-            <h4>動画を追加する</h4>
-            <label>カテゴリー:</label>
-            <select id="add-cat">
-                <option value="keio">京王</option>
-                <option value="jr">JR</option>
-                <option value="other">その他</option>
-            </select>
-            <input type="text" id="add-title" placeholder="動画のタイトル">
-            <input type="text" id="add-url" placeholder="動画のURL (https://...)">
-            <button class="btn-main" style="background: #aaffaa;" onclick="addUrl()">データを保存して追加</button>
-            <p style="font-size: 12px; margin-top:10px;">※保存すると全員の一覧に反映されます。</p>
+        <div id="admin-tools" style="display:none;">
+            <h3>新しい動画を追加</h3>
+            <select id="cat"><option value="keio">京王</option><option value="jr">JR</option><option value="other">その他</option></select>
+            <input type="text" id="title" placeholder="動画タイトル">
+            <input type="text" id="url" placeholder="URL (YouTube等)">
+            <button class="btn-action" style="background: #27ae60;" onclick="addVideo()">保存する</button>
+            <button class="btn-action" style="background: #ccc; margin-top:20px;" onclick="location.reload()">ログアウト</button>
         </div>
-
-        <hr style="margin: 30px 0;">
-        <button class="btn-main" onclick="logout()" style="background: #ffcccc;">ログアウト（規約再表示）</button>
     </div>
 </div>
 
-<!-- ここを最新の読み込み方法に差し替え -->
+<!-- Firebase v8 -->
 <script src="https://gstatic.com"></script>
 <script src="https://gstatic.com"></script>
-<script src="https://gstatic.com"></script>
-
 
 <script>
-    // 1. 時計機能（Firebaseの読み込み成否に関わらず動作）
-    function updateClock() {
-        const now = new Date();
-        const d = document.getElementById('date');
-        const t = document.getElementById('time');
-        if(d) d.innerText = now.getFullYear() + "/" + String(now.getMonth() + 1).padStart(2, '0') + "/" + String(now.getDate()).padStart(2, '0');
-        if(t) t.innerText = now.toLocaleTimeString('ja-JP');
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // 2. Firebase初期化
+    // 1. Firebase設定（あなたの設定を反映済み）
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "tetsudo.firebaseapp.com",
@@ -127,102 +102,79 @@
         messagingSenderId: "91814902933",
         appId: "1:91814902933:web:f9a8a3bce73470b842ef9c"
     };
-    
-    // 変数 db を確実に使えるように宣言
-    let db;
-    if (typeof firebase !== 'undefined') {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        db = firebase.database();
-        console.log("Firebase initialized successfully");
-    } else {
-        console.error("Firebase library not loaded");
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 2. 時計
+    function updateTime() {
+        const n = new Date();
+        document.getElementById('date').innerText = n.toLocaleDateString();
+        document.getElementById('time').innerText = n.toLocaleTimeString();
     }
+    setInterval(updateTime, 1000);
+    updateTime();
 
+    // 3. 動画読み込み
+    let allData = {};
+    db.ref('urls').on('value', (snap) => {
+        allData = snap.val() || {};
+        render('all');
+    });
 
-    // 3. ログイン・規約チェック
-    if (!localStorage.getItem('tetsudo_agreed')) {
-        document.getElementById('rule-overlay').style.display = 'flex';
-    }
-
-    function acceptRules() {
-        if(document.getElementById('rule-agree').checked) {
-            localStorage.setItem('tetsudo_agreed', 'true');
-            document.getElementById('rule-overlay').style.display = 'none';
-        } else {
-            alert("同意チェックを入れてください");
-        }
-    }
-
-    function logout() {
-        localStorage.removeItem('tetsudo_agreed');
-        location.reload();
-    }
-
-    // 4. タブ切り替え
-    function showTab(id) {
-        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.getElementById('btn-' + id).classList.add('active');
-    }
-
-    // 5. 管理者認証
-    function authAdmin() {
-        if(document.getElementById('admin-pw').value === "0829") {
-            document.getElementById('admin-panel').style.display = 'block';
-            document.getElementById('admin-auth').style.display = 'none';
-            document.body.classList.add('admin-mode');
-            alert("管理者認証に成功しました。一覧に削除ボタンが表示されます。");
-        } else {
-            alert("パスワードが違います。");
-        }
-    }
-
-    // 6. Firebaseデータ追加
-    function addUrl() {
-        const cat = document.getElementById('add-cat').value;
-        const title = document.getElementById('add-title').value;
-        const url = document.getElementById('add-url').value;
-        if(!title || !url) return alert("タイトルとURLを入力してください");
-
-        db.ref('urls').push({cat, title, url})
-            .then(() => {
-                alert("保存しました！");
-                document.getElementById('add-title').value = "";
-                document.getElementById('add-url').value = "";
-            })
-            .catch(e => alert("保存エラー: Firebaseの『ルール』が公開(true)になっているか確認してください。"));
-    }
-
-    // 7. Firebaseデータ削除
-    function delUrl(key) {
-        if(confirm("この項目を完全に消去しますか？")) {
-            db.ref('urls/' + key).remove();
-        }
-    }
-
-    // 8. リアルタイムデータ読み込み
-    if(db) {
-        db.ref('urls').on('value', (snapshot) => {
-            const data = snapshot.val();
-            ['keio', 'jr', 'other'].forEach(c => document.getElementById('list-' + c).innerHTML = "");
-            if(!data) return;
-            Object.keys(data).forEach(key => {
-                const item = data[key];
-                const li = `<li>
-                    <a href="${item.url}" target="_blank">${item.title}</a>
-                    <button class="del-btn" onclick="delUrl('${key}')">削除</button>
-                </li>`;
-                const targetList = document.getElementById('list-' + item.cat);
-                if(targetList) targetList.innerHTML += li;
-            });
+    function render(filter) {
+        const list = document.getElementById('main-list');
+        list.innerHTML = "";
+        Object.keys(allData).forEach(key => {
+            const item = allData[key];
+            if(filter !== 'all' && item.cat !== filter) return;
+            
+            const card = document.createElement('div');
+            card.className = `video-card card-${item.cat}`;
+            card.innerHTML = `
+                <h3>${item.title}</h3>
+                <a href="${item.url}" target="_blank">▶ 動画を見る</a>
+                <button class="del-badge" onclick="delVideo('${key}')">×</button>
+            `;
+            list.appendChild(card);
         });
     }
 
-    // 初期表示
-    showTab('keio');
+    // 4. 操作
+    function filterCat(cat, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('settings-area').style.display = 'none';
+        render(cat);
+    }
+
+    function toggleSettings() {
+        const area = document.getElementById('settings-area');
+        area.style.display = area.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function login() {
+        if(document.getElementById('pass').value === "0829") {
+            document.getElementById('admin-login').style.display = 'none';
+            document.getElementById('admin-tools').style.display = 'block';
+            document.body.classList.add('admin-mode');
+        } else { alert("失敗"); }
+    }
+
+    function addVideo() {
+        const cat = document.getElementById('cat').value;
+        const title = document.getElementById('title').value;
+        const url = document.getElementById('url').value;
+        if(!title || !url) return alert("入力してください");
+        db.ref('urls').push({cat, title, url}).then(() => {
+            alert("追加完了");
+            document.getElementById('title').value = "";
+            document.getElementById('url').value = "";
+        });
+    }
+
+    function delVideo(key) {
+        if(confirm("削除しますか？")) db.ref('urls/' + key).remove();
+    }
 </script>
 </body>
 </html>
