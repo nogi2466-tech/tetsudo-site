@@ -3,81 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RailStream - 鉄道動画集</title>
+    <title>RailStream - クラウド同期</title>
+    <!-- Firebaseライブラリ -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
-        :root { --main-color: #2c3e50; --accent-color: #e74c3c; --bg-color: #f4f7f6; }
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg-color); margin: 0; color: #333; }
-        header { background: var(--main-color); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .logo { font-size: 1.5rem; font-weight: bold; }
-        .clock { text-align: right; font-family: monospace; font-size: 1rem; }
-        .container { max-width: 900px; margin: 20px auto; padding: 0 15px; }
-        .filter-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
-        .filter-btn { padding: 10px 25px; border: none; background: white; border-radius: 30px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.3s; }
-        .filter-btn.active { background: var(--accent-color); color: white; }
-        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .video-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; border-left: 5px solid #ccc; text-align: left; }
-        .card-keio { border-left-color: #e60012; }
-        .card-jr { border-left-color: #008000; }
-        .card-other { border-left-color: #333; }
-        .video-card h3 { margin: 0 0 10px 0; font-size: 1.1rem; }
-        .video-card a { color: #3498db; text-decoration: none; font-weight: bold; display: block; margin-top: 10px; }
-        .del-badge { position: absolute; top: 5px; right: 5px; background: red; color: white; border: none; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; display: none; }
-        .admin-mode .del-badge { display: block; }
-        .settings-panel { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 30px; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        /* パスワード入力欄を目立たなくする */
-        #pass { background: #fafafa; }
-        .btn-action { width: 100%; padding: 15px; border: none; border-radius: 8px; background: var(--main-color); color: white; font-weight: bold; cursor: pointer; font-size: 16px; }
+        :root { --main-blue: #007bff; --main-green: #28a745; --bg-gray: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-gray); margin: 0; color: #333; }
+        header { background: #1a2a3a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 700px; margin: 20px auto; padding: 20px; background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        
+        h2 { border-left: 5px solid var(--main-blue); padding-left: 15px; margin-bottom: 25px; color: #1a2a3a; }
+
+        /* 同期ボタンのデザイン（参考にされたサイト風） */
+        .sync-btn { width: 100%; padding: 15px; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 12px; transition: 0.2s; }
+        .btn-send { background: var(--main-blue); }
+        .btn-receive { background: var(--main-green); }
+        .btn-delete { background: #6c757d; margin-top: 20px; }
+        .sync-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+        /* 入力エリア */
+        .input-group { background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 30px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        /* リスト表示 */
+        .video-list { margin-top: 20px; }
+        .video-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .video-item a { color: var(--main-blue); text-decoration: none; font-weight: bold; }
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #eee; margin-right: 8px; }
+
+        .clock { font-family: monospace; font-size: 0.9rem; text-align: right; }
     </style>
 </head>
 <body>
 
 <header>
-    <div class="logo">RailStream</div>
-    <div class="clock"><div id="date">----/--/--</div><div id="time">--:--:--</div></div>
+    <div style="font-weight:bold; font-size:1.2rem;">RailStream</div>
+    <div class="clock"><div id="date">--/--/--</div><div id="time">--:--:--</div></div>
 </header>
 
 <div class="container">
-    <div class="filter-bar">
-        <button class="filter-btn active" onclick="filterCat('all', this)">すべて</button>
-        <button class="filter-btn" onclick="filterCat('keio', this)">京王</button>
-        <button class="filter-btn" onclick="filterCat('jr', this)">JR</button>
-        <button class="filter-btn" onclick="filterCat('other', this)">その他</button>
-        <button class="filter-btn" onclick="toggleSettings()">⚙ 管理</button>
-    </div>
-    
-    <div class="video-grid" id="main-list"></div>
+    <h2>クラウド同期</h2>
 
-    <div id="settings-area" class="settings-panel" style="display:none;">
-        <div id="admin-login">
-            <h3>管理者ログイン</h3>
-            <input type="password" id="pass" placeholder="Passwordを入力してください">
-            <button class="btn-action" onclick="login()">ログイン</button>
-        </div>
-        <div id="admin-tools" style="display:none;">
-            <h3>新しい動画を追加</h3>
-            <select id="cat"><option value="keio">京王</option><option value="jr">JR</option><option value="other">その他</option></select>
-            <input type="text" id="title" placeholder="タイトルを入力">
-            <input type="text" id="url" placeholder="URLを貼り付け">
-            <button class="btn-action" style="background: #27ae60;" onclick="addVideo()">データを保存して追加</button>
-            <button class="btn-action" style="background: #ccc; margin-top:20px;" onclick="location.reload()">ログアウト</button>
-        </div>
+    <!-- 同期アクション -->
+    <button class="sync-btn btn-send" onclick="sendData()">今のデータを保存 (送信)</button>
+    <button class="sync-btn btn-receive" onclick="receiveData()">最新のデータを読込 (受信)</button>
+
+    <hr style="margin:30px 0; border:0; border-top:1px solid #eee;">
+
+    <div class="input-group">
+        <h3>動画を追加</h3>
+        <select id="cat"><option value="keio">京王</option><option value="jr">JR</option><option value="other">その他</option></select>
+        <input type="text" id="title" placeholder="タイトルを入力">
+        <input type="text" id="url" placeholder="URLを貼り付け">
+        <button class="sync-btn" style="background:#333;" onclick="addToList()">リストに追加</button>
     </div>
+
+    <div class="video-list" id="display-list">
+        <!-- ここに一時的なリストが表示されます -->
+    </div>
+
+    <button class="sync-btn btn-delete" onclick="clearAll()">全データ初期化</button>
 </div>
 
 <script>
-    // --- 1. 時計 ---
-    function updateClock() {
+    // 1. 基本機能（時計）
+    function clock() {
         const n = new Date();
-        document.getElementById('date').innerText = n.toLocaleDateString('ja-JP');
-        document.getElementById('time').innerText = n.toLocaleTimeString('ja-JP');
+        document.getElementById('date').innerText = n.toLocaleDateString();
+        document.getElementById('time').innerText = n.toLocaleTimeString();
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(clock, 1000); clock();
 
-    // --- 2. Firebase設定 ---
+    // 2. Firebase設定
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "://firebaseapp.com",
@@ -87,101 +85,84 @@
         messagingSenderId: "91814902933",
         appId: "1:91814902933:web:f9a8a3bce73470b842ef9c"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    let db = null;
-    let allData = {};
+    // 3. ローカルでのデータ管理
+    let currentList = JSON.parse(localStorage.getItem('rail_data')) || [];
+    render();
 
-    // 接続状態をチェックする関数
-    function initFirebase() {
-        if (typeof firebase !== 'undefined') {
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-
-            // データのリアルタイム受信
-            db.ref('urls').on('value', (snap) => {
-                allData = snap.val() || {};
-                render('all');
-                console.log("Firebase Connected!");
-            }, (error) => {
-                console.error("Database error:", error);
-            });
-        } else {
-            // 読み込めていない場合は1秒後に再試行
-            setTimeout(initFirebase, 1000);
-        }
-    }
-    initFirebase();
-
-    // --- 3. 表示処理 ---
-    function render(filter) {
-        const list = document.getElementById('main-list');
-        list.innerHTML = "";
-        Object.keys(allData).forEach(key => {
-            const item = allData[key];
-            if(filter !== 'all' && item.cat !== filter) return;
-            
-            const card = document.createElement('div');
-            card.className = `video-card card-${item.cat}`;
-            card.innerHTML = `
-                <h3>${item.title}</h3>
-                <span style="font-size: 10px; color: #888;">区分: ${item.cat.toUpperCase()}</span>
-                <a href="${item.url}" target="_blank">▶ 視聴する</a>
-                <button class="del-badge" onclick="delVideo('${key}')">×</button>
-            `;
-            list.appendChild(card);
-        });
-    }
-
-    // --- 4. 操作 ---
-    function filterCat(cat, btn) {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('settings-area').style.display = 'none';
-        render(cat);
-    }
-
-    function toggleSettings() {
-        const area = document.getElementById('settings-area');
-        area.style.display = area.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function login() {
-        const inputPass = document.getElementById('pass').value;
-        if(inputPass === "0829") {
-            document.getElementById('admin-login').style.display = 'none';
-            document.getElementById('admin-tools').style.display = 'block';
-            document.body.classList.add('admin-mode');
-            document.getElementById('pass').value = "";
-        } else { 
-            alert("パスワードが違います");
-        }
-    }
-
-    function addVideo() {
-        // dbがまだ準備中の場合は待機を促す
-        if (!db) {
-            alert("まだ接続の準備ができていません。数秒待ってからやり直してください。");
-            return;
-        }
-
-        const cat = document.getElementById('cat').value;
+    function addToList() {
         const title = document.getElementById('title').value;
         const url = document.getElementById('url').value;
-        if(!title || !url) return alert("タイトルとURLを入力してください");
-        
-        db.ref('urls').push({cat, title, url}).then(() => {
-            alert("保存しました！");
-            document.getElementById('title').value = "";
-            document.getElementById('url').value = "";
-        }).catch(err => {
-            alert("エラーが発生しました: " + err.message);
+        const cat = document.getElementById('cat').value;
+        if(!title || !url) return alert("入力してください");
+
+        currentList.push({title, url, cat});
+        saveLocal();
+        render();
+        document.getElementById('title').value = "";
+        document.getElementById('url').value = "";
+    }
+
+    function render() {
+        const listDiv = document.getElementById('display-list');
+        listDiv.innerHTML = "<h3>現在のリスト</h3>";
+        currentList.forEach((item, index) => {
+            listDiv.innerHTML += `
+                <div class="video-item">
+                    <div>
+                        <span class="tag">${item.cat.toUpperCase()}</span>
+                        <a href="${item.url}" target="_blank">${item.title}</a>
+                    </div>
+                    <button onclick="removeItem(${index})" style="border:none; background:none; cursor:pointer;">❌</button>
+                </div>
+            `;
         });
     }
 
-    function delVideo(key) {
-        if(confirm("消去しますか？")) db.ref('urls/' + key).remove();
+    function removeItem(index) {
+        currentList.splice(index, 1);
+        saveLocal();
+        render();
+    }
+
+    function saveLocal() {
+        localStorage.setItem('rail_data', JSON.stringify(currentList));
+    }
+
+    function clearAll() {
+        if(confirm("すべて削除しますか？")) {
+            currentList = [];
+            saveLocal();
+            render();
+        }
+    }
+
+    // --- 4. 同期機能 (Firebase) ---
+
+    // 送信: 今のリストをクラウドに保存
+    function sendData() {
+        if(!db) return alert("接続エラー");
+        db.ref('sync_data').set(currentList)
+            .then(() => alert("クラウドに保存しました！"))
+            .catch(e => alert("失敗: " + e.message));
+    }
+
+    // 受信: クラウドから最新データを取ってくる
+    function receiveData() {
+        db.ref('sync_data').once('value').then((snap) => {
+            const data = snap.val();
+            if(data) {
+                currentList = data;
+                saveLocal();
+                render();
+                alert("最新データを読み込みました！");
+            } else {
+                alert("データが見つかりませんでした");
+            }
+        });
     }
 </script>
-
 </body>
 </html>
