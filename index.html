@@ -115,7 +115,7 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // 2. Firebase初期化（画像の設定値を反映）
+    // 2. Firebase初期化
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "tetsudo.firebaseapp.com",
@@ -126,13 +126,18 @@
         appId: "1:91814902933:web:f9a8a3bce73470b842ef9c"
     };
     
-    // Firebaseが正しく読み込まれているか確認してから初期化
+    // 変数 db を確実に使えるように宣言
+    let db;
     if (typeof firebase !== 'undefined') {
-        firebase.initializeApp(firebaseConfig);
-        var db = firebase.database();
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.database();
+        console.log("Firebase initialized successfully");
     } else {
-        alert("Firebaseの読み込みに失敗しました。ネット接続を確認してください。");
+        console.error("Firebase library not loaded");
     }
+
 
     // 3. ログイン・規約チェック
     if (!localStorage.getItem('tetsudo_agreed')) {
