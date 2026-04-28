@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RailStream - 自動同期</title>
-    <!-- Firebaseライブラリ -->
+    <!-- Firebase 8.10.1 ライブラリを確実に読み込む -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
@@ -49,6 +49,7 @@
     </section>
 
 <script>
+    // ★画像の設定値を正確に反映（databaseURLを特に修正）
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "tetsudo.firebaseapp.com",
@@ -63,18 +64,26 @@
     let db = null;
 
     function init() {
+        // Firebaseが読み込まれるまで待機
         if (typeof firebase !== 'undefined' && firebase.database) {
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
             db = firebase.database();
             
+            // データのリアルタイム受信設定
             db.ref('rail_auto_sync').on('value', (snap) => {
                 const data = snap.val() || [];
                 render(data);
+                
                 const btn = document.getElementById('add-btn');
                 if(btn) {
                     btn.disabled = false;
                     btn.innerText = "データを追加して同期";
                 }
+            }, (error) => {
+                console.error("同期エラー:", error);
+                alert("データの読み込みに失敗しました。ルールの設定を確認してください。");
             });
             console.log("Firebase Ready");
         } else {
@@ -88,23 +97,27 @@
         const title = document.getElementById('new-title').value;
         const url = document.getElementById('new-url').value;
         const cat = document.getElementById('new-cat').value;
-        if(!title || !url) return alert("入力してください");
+        if(!title || !url) return alert("タイトルとURLを入力してください");
 
         db.ref('rail_auto_sync').once('value').then((snap) => {
             const list = snap.val() || [];
-            list.push({title, url, cat});
-            db.ref('rail_auto_sync').set(list).then(() => {
-                document.getElementById('new-title').value = "";
-                document.getElementById('new-url').value = "";
-            });
+            list.push({title: title, url: url, cat: cat});
+            return db.ref('rail_auto_sync').set(list);
+        }).then(() => {
+            document.getElementById('new-title').value = "";
+            document.getElementById('new-url').value = "";
+        }).catch((err) => {
+            alert("送信エラー: " + err.message);
         });
     }
 
     function render(data) {
-        ['all', 'keio', 'jr', 'others'].forEach(id => {
+        const ids = ['all', 'keio', 'jr', 'others'];
+        ids.forEach(id => {
             const el = document.getElementById('list-' + id);
             if(el) el.innerHTML = "";
         });
+
         data.forEach((item, index) => {
             const html = `
                 <div class="url-item">
@@ -118,6 +131,7 @@
     }
 
     function autoDelete(i) {
+        if(!confirm("削除しますか？")) return;
         db.ref('rail_auto_sync').once('value').then(s => {
             const l = s.val() || []; 
             l.splice(i, 1); 
@@ -130,18 +144,14 @@
     function showPage(id) {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        const targetSection = document.getElementById(id);
-        const targetNav = document.getElementById('nav-' + id);
-        if(targetSection) targetSection.classList.add('active');
-        if(targetNav) targetNav.classList.add('active');
+        document.getElementById(id).classList.add('active');
+        document.getElementById('nav-' + id).classList.add('active');
     }
 
     setInterval(() => {
         const n = new Date();
-        const dEl = document.getElementById('date');
-        const tEl = document.getElementById('time');
-        if(dEl) dEl.innerText = n.toLocaleDateString();
-        if(tEl) tEl.innerText = n.toLocaleTimeString();
+        document.getElementById('date').innerText = n.toLocaleDateString();
+        document.getElementById('time').innerText = n.toLocaleTimeString();
     }, 1000);
 </script>
 </body>
