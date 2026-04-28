@@ -18,6 +18,8 @@
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         .clock { background: #e1f5fe; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
         .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; background: #666; }
+        a { text-decoration: none; color: #333; }
+        a:hover { color: var(--primary-blue); }
     </style>
 </head>
 <body>
@@ -38,7 +40,10 @@
 
     <section id="settings">
         <h2>データ追加・同期</h2>
-        <div class="clock"><div id="date"></div><div id="time" style="font-size:24px; font-weight:bold;">00:00:00</div></div>
+        <div class="clock">
+            <div id="date">----/--/--</div>
+            <div id="time" style="font-size:24px; font-weight:bold;">00:00:00</div>
+        </div>
         
         <select id="new-cat">
             <option value="keio">京王</option>
@@ -57,10 +62,9 @@
     </section>
 
 <script>
-    // あなたのGAS URLを使用
+    // ★発行された最新のGAS URL
     const API_URL = "https://google.com";
     
-    // ローカルストレージから読み込み
     let railData = JSON.parse(localStorage.getItem('railData') || '[]');
 
     function addItem() {
@@ -75,7 +79,7 @@
         
         document.getElementById('new-title').value = "";
         document.getElementById('new-url').value = "";
-        alert("追加しました。「送信」ボタンで同期してください。");
+        alert("追加しました。保存ボタンでクラウドに同期してください。");
     }
 
     function render() {
@@ -87,7 +91,7 @@
                 <div class="url-item">
                     <div>
                         <span class="tag">${item.cat.toUpperCase()}</span>
-                        <b><a href="${item.url}" target="_blank" style="text-decoration:none; color:#333;">${item.title}</a></b>
+                        <b><a href="${item.url}" target="_blank">${item.title}</a></b>
                     </div>
                     <button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">削除</button>
                 </div>`;
@@ -109,28 +113,32 @@
         localStorage.setItem('railData', JSON.stringify(railData));
     }
 
-    // --- 同期機能 (GAS連携) ---
+    // --- 同期機能 ---
     async function syncSave() {
         const btn = event.target;
+        const originalText = btn.innerText;
         btn.innerText = "送信中...";
         btn.disabled = true;
 
         try {
+            // GASへデータを送信
             await fetch(API_URL, {
                 method: "POST",
                 body: JSON.stringify({ action: "save", data: railData })
             });
             alert("クラウドに保存しました！");
         } catch (e) {
-            alert("保存に失敗しました。GASの設定を確認してください。");
+            console.error(e);
+            alert("保存に失敗しました。GASの設定（全員への公開）を確認してください。");
         } finally {
-            btn.innerText = "クラウドに保存 (送信)";
+            btn.innerText = originalText;
             btn.disabled = false;
         }
     }
 
     async function syncLoad() {
         const btn = event.target;
+        const originalText = btn.innerText;
         btn.innerText = "受信中...";
         btn.disabled = true;
 
@@ -144,9 +152,10 @@
                 alert("最新データを読み込みました！");
             }
         } catch (e) {
+            console.error(e);
             alert("読込に失敗しました。");
         } finally {
-            btn.innerText = "クラウドから読込 (受信)";
+            btn.innerText = originalText;
             btn.disabled = false;
         }
     }
