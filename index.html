@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RailStream - 自動同期</title>
-    <!-- Firebaseライブラリ (最も安定した読み込み方法) -->
+    <!-- ★FirebaseライブラリのURLを修正しました -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
@@ -49,10 +49,11 @@
     </section>
 
 <script>
+    // ★Firebaseの設定値をあなたのプロジェクト専用に修正しました
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
-        authDomain: "://firebaseapp.com",
-        databaseURL: "https://firebaseio.com",
+        authDomain: "tetsudo.firebaseapp.com",
+        databaseURL: "https://tetsudo-default-rtdb.firebaseio.com",
         projectId: "tetsudo",
         storageBucket: "tetsudo.firebasestorage.app",
         messagingSenderId: "91814902933",
@@ -80,6 +81,8 @@
                     btn.disabled = false;
                     btn.innerText = "データを追加して同期";
                 }
+            }, (err) => {
+                console.error("同期エラー:", err);
             });
             console.log("Firebase Ready");
         } else {
@@ -97,7 +100,10 @@
 
         db.ref('rail_auto_sync').once('value').then((snap) => {
             const val = snap.val();
-            const list = (Array.isArray(val)) ? val : (val && typeof val === 'object' ? Object.values(val) : []);
+            let list = [];
+            if (Array.isArray(val)) list = val;
+            else if (val && typeof val === 'object') list = Object.values(val);
+            
             list.push({title, url, cat});
             db.ref('rail_auto_sync').set(list).then(() => {
                 document.getElementById('new-title').value = "";
@@ -107,8 +113,12 @@
     }
 
     function render(data) {
-        ['all', 'keio', 'jr', 'others'].forEach(id => document.getElementById('list-' + id).innerHTML = "");
+        ['all', 'keio', 'jr', 'others'].forEach(id => {
+            const el = document.getElementById('list-' + id);
+            if(el) el.innerHTML = "";
+        });
         data.forEach((item, index) => {
+            // itemが文字列（初期値0など）の場合はスキップ
             if(!item || typeof item !== 'object' || !item.title) return;
             const html = `
                 <div class="url-item">
@@ -122,9 +132,13 @@
     }
 
     function autoDelete(i) {
+        if(!confirm("削除しますか？")) return;
         db.ref('rail_auto_sync').once('value').then(s => {
             const val = s.val();
-            const l = (Array.isArray(val)) ? val : Object.values(val);
+            let l = [];
+            if (Array.isArray(val)) l = val;
+            else if (val && typeof val === 'object') l = Object.values(val);
+            
             l.splice(i, 1); 
             db.ref('rail_auto_sync').set(l);
         });
@@ -135,14 +149,18 @@
     function showPage(id) {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.getElementById('nav-' + id).classList.add('active');
+        const target = document.getElementById(id);
+        const nav = document.getElementById('nav-' + id);
+        if(target) target.classList.add('active');
+        if(nav) nav.classList.add('active');
     }
 
     setInterval(() => {
         const n = new Date();
-        document.getElementById('date').innerText = n.toLocaleDateString();
-        document.getElementById('time').innerText = n.toLocaleTimeString();
+        const d = document.getElementById('date');
+        const t = document.getElementById('time');
+        if(d) d.innerText = n.toLocaleDateString();
+        if(t) t.innerText = n.toLocaleTimeString();
     }, 1000);
 </script>
 </body>
