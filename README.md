@@ -75,19 +75,28 @@
 
     let db = null;
 
-    function init() {
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        
-        // リアルタイムリスナー：データが変わると全デバイスで自動更新される
-        db.ref('rail_auto_sync').on('value', (snap) => {
-            const data = snap.val() || [];
-            render(data);
-            const btn = document.getElementById('add-btn');
-            if(btn) {
-                btn.disabled = false;
-                btn.innerText = "データを追加して同期";
-            }
+        function init() {
+        // firebaseが読み込まれるまで待機する安全策
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            
+            db.ref('rail_auto_sync').on('value', (snap) => {
+                const data = snap.val() || [];
+                render(data);
+                const btn = document.getElementById('add-btn');
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerText = "データを追加して同期";
+                }
+            });
+            console.log("Firebase接続成功");
+        } else {
+            // まだ読み込まれていなければ0.5秒後に再試行
+            setTimeout(init, 500);
+        }
+    }
+
         });
     }
     window.onload = init;
