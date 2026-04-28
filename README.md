@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RailStream - 自動同期</title>
-    <!-- Firebase 8.10.1 ライブラリを確実に読み込む -->
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
     <style>
         :root { --primary-blue: #0078d4; --bg-gray: #f9f9f9; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; }
@@ -44,12 +41,14 @@
         <select id="new-cat"><option value="keio">京王</option><option value="jr">JR</option><option value="others">その他</option></select>
         <input type="text" id="new-title" placeholder="タイトルを入力">
         <input type="text" id="new-url" placeholder="URLを貼り付け">
-        <button id="add-btn" class="btn-main" onclick="autoAdd()" disabled>接続中...</button>
-        <button class="btn-main" style="background:#999; margin-top:20px;" onclick="autoClear()">全削除</button>
+        <button id="add-btn" class="btn-main" disabled>接続中...</button>
+        <button id="clear-btn" class="btn-main" style="background:#999; margin-top:20px;">全削除</button>
     </section>
 
-<script>
-    // ★画像の設定値を正確に反映（databaseURLを特に修正）
+<script type="module">
+    import { initializeApp } from "https://gstatic.com";
+    import { getDatabase, ref, onValue, set, get } from "https://gstatic.com";
+
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
         authDomain: "tetsudo.firebaseapp.com",
@@ -61,92 +60,66 @@
         measurementId: "G-MEZNHLIE80"
     };
 
-    let db = null;
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dbRef = ref(db, 'rail_auto_sync');
 
-    function init() {
-        // Firebaseが読み込まれるまで待機
-        if (typeof firebase !== 'undefined' && firebase.database) {
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
-            db = firebase.database();
-            
-            // データのリアルタイム受信設定
-            db.ref('rail_auto_sync').on('value', (snap) => {
-                const data = snap.val() || [];
-                render(data);
-                
-                const btn = document.getElementById('add-btn');
-                if(btn) {
-                    btn.disabled = false;
-                    btn.innerText = "データを追加して同期";
-                }
-            }, (error) => {
-                console.error("同期エラー:", error);
-                alert("データの読み込みに失敗しました。ルールの設定を確認してください。");
-            });
-            console.log("Firebase Ready");
-        } else {
-            setTimeout(init, 500);
-        }
-    }
-    window.onload = init;
+    onValue(dbRef, (snapshot) => {
+        const val = snapshot.val();
+        // データベースが「0」や空の場合でも配列として扱う
+        const data = (Array.isArray(val)) ? val : [];
+        render(data);
+        document.getElementById('add-btn').disabled = false;
+        document.getElementById('add-btn').innerText = "データを追加して同期";
+    });
 
-    function autoAdd() {
-        if (!db) return;
+    window.autoAdd = async () => {
         const title = document.getElementById('new-title').value;
         const url = document.getElementById('new-url').value;
         const cat = document.getElementById('new-cat').value;
-        if(!title || !url) return alert("タイトルとURLを入力してください");
+        if(!title || !url) return alert("入力してください");
 
-        db.ref('rail_auto_sync').once('value').then((snap) => {
-            const list = snap.val() || [];
-            list.push({title: title, url: url, cat: cat});
-            return db.ref('rail_auto_sync').set(list);
-        }).then(() => {
-            document.getElementById('new-title').value = "";
-            document.getElementById('new-url').value = "";
-        }).catch((err) => {
-            alert("送信エラー: " + err.message);
-        });
-    }
+        const snapshot = await get(dbRef);
+        const val = snapshot.val();
+        const list = (Array.isArray(val)) ? val : [];
+        list.push({ title, url, cat });
+        await set(dbRef, list);
+        
+        document.getElementById('new-title').value = "";
+        document.getElementById('new-url').value = "";
+    };
+
+    window.autoDelete = async (index) => {
+        if(!confirm("削除しますか？")) return;
+        const snapshot = await get(dbRef);
+        const list = snapshot.val() || [];
+        list.splice(index, 1);
+        await set(dbRef, list);
+    };
+
+    document.getElementById('add-btn').onclick = window.autoAdd;
+    document.getElementById('clear-btn').onclick = () => { if(confirm("全消去？")) set(dbRef, []); };
 
     function render(data) {
-        const ids = ['all', 'keio', 'jr', 'others'];
-        ids.forEach(id => {
-            const el = document.getElementById('list-' + id);
-            if(el) el.innerHTML = "";
-        });
-
+        ['all', 'keio', 'jr', 'others'].forEach(id => document.getElementById('list-' + id).innerHTML = "");
         data.forEach((item, index) => {
+            if(!item.title) return; // 不正データ飛ばし
             const html = `
                 <div class="url-item">
                     <div><b>[${item.cat.toUpperCase()}] ${item.title}</b></div>
                     <button onclick="autoDelete(${index})" style="color:red; border:none; background:none; cursor:pointer;">削除</button>
                 </div>`;
             document.getElementById('list-all').innerHTML += html;
-            const target = document.getElementById('list-' + item.cat);
-            if(target) target.innerHTML += html;
+            if(document.getElementById('list-' + item.cat)) document.getElementById('list-' + item.cat).innerHTML += html;
         });
     }
 
-    function autoDelete(i) {
-        if(!confirm("削除しますか？")) return;
-        db.ref('rail_auto_sync').once('value').then(s => {
-            const l = s.val() || []; 
-            l.splice(i, 1); 
-            db.ref('rail_auto_sync').set(l);
-        });
-    }
-
-    function autoClear() { if(confirm("全消去しますか？")) db.ref('rail_auto_sync').set([]); }
-    
-    function showPage(id) {
+    window.showPage = (id) => {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.getElementById('nav-' + id).classList.add('active');
-    }
+    };
 
     setInterval(() => {
         const n = new Date();
