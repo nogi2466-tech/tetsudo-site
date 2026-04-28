@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RailStream - 自動同期</title>
-    <!-- Firebaseライブラリ (※必要に応じて最新のCDNパスに調整してください) -->
+    <title>RailStream - 自動同期システム</title>
+    <!-- Firebase SDK (バージョン8を使用) -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
         :root { --primary-blue: #0078d4; --bg-gray: #f9f9f9; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; }
         header { background: linear-gradient(135deg, #0078d4, #00b0ff); color: white; padding: 25px 10px; }
-        nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); white-space: nowrap; overflow-x: auto; }
-        nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 15px; cursor: pointer; border-radius: 20px; }
+        nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: center; overflow-x: auto; }
+        nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 15px; cursor: pointer; border-radius: 20px; white-space: nowrap; }
         nav button.active { background: var(--primary-blue); color: white; font-weight: bold; }
         section { display: none; max-width: 500px; margin: 20px auto; padding: 20px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: left; }
         section.active { display: block; }
@@ -21,15 +21,19 @@
         .btn-main:disabled { background: #ccc; cursor: not-allowed; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         .clock { background: #e1f5fe; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; vertical-align: middle; color: white; }
+        .tag-keio { background: #dd0077; }
+        .tag-jr { background: #008000; }
+        .tag-others { background: #666; }
     </style>
 </head>
 <body>
     <header><h1>RailStream</h1></header>
+    
     <nav>
         <button onclick="showPage('all')" id="nav-all" class="active">すべて</button>
         <button onclick="showPage('keio')" id="nav-keio">京王</button>
         <button onclick="showPage('jr')" id="nav-jr">JR</button>
-        <!-- ★「その他」のナビボタン追加 -->
         <button onclick="showPage('others')" id="nav-others">その他</button>
         <button onclick="showPage('settings')" id="nav-settings">設定</button>
     </nav>
@@ -37,29 +41,31 @@
     <section id="all" class="active"><h2>すべての動画</h2><div id="list-all"></div></section>
     <section id="keio"><h2>京王線</h2><div id="list-keio"></div></section>
     <section id="jr"><h2>JR線</h2><div id="list-jr"></div></section>
-    <!-- ★「その他」のリスト表示エリア追加 -->
     <section id="others"><h2>その他</h2><div id="list-others"></div></section>
 
     <section id="settings">
         <h2>自動同期・追加</h2>
-        <div class="clock"><div id="date"></div><div id="time" style="font-size:24px; font-weight:bold;">00:00:00</div></div>
+        <div class="clock">
+            <div id="date"></div>
+            <div id="time" style="font-size:24px; font-weight:bold;">00:00:00</div>
+        </div>
         <select id="new-cat">
             <option value="keio">京王</option>
             <option value="jr">JR</option>
-            <!-- ★セレクトボックスに「その他」追加 -->
             <option value="others">その他</option>
         </select>
         <input type="text" id="new-title" placeholder="タイトルを入力">
         <input type="text" id="new-url" placeholder="URLを貼り付け">
         <button id="add-btn" class="btn-main" onclick="autoAdd()" disabled>接続中...</button>
-        <button class="btn-main" style="background:#999; margin-top:20px;" onclick="autoClear()">全削除</button>
+        <button class="btn-main" style="background:#ff5252; margin-top:20px;" onclick="autoClear()">データを全削除</button>
     </section>
 
 <script>
+    // 画像から取得した正しい設定値
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
-        authDomain: "://firebaseapp.com",
-        databaseURL: "https://firebaseio.com", // ※ご自身のDB URLに合わせてください
+        authDomain: "tetsudo.firebaseapp.com",
+        databaseURL: "https://tetsudo-default-rtdb.firebaseio.com",
         projectId: "tetsudo",
         storageBucket: "tetsudo.firebasestorage.app",
         messagingSenderId: "91814902933",
@@ -70,32 +76,27 @@
     let db = null;
 
     function init() {
-        if (typeof firebase !== 'undefined' && firebase.database) {
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-            
-            db.ref('rail_auto_sync').on('value', (snap) => {
-                const data = snap.val() || [];
-                render(data);
-                const btn = document.getElementById('add-btn');
-                if(btn) {
-                    btn.disabled = false;
-                    btn.innerText = "データを追加して同期";
-                }
-            });
-            console.log("Firebase Ready");
-        } else {
-            setTimeout(init, 1000);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        
+        // リアルタイムリスナー：データが変わると全デバイスで自動更新される
+        db.ref('rail_auto_sync').on('value', (snap) => {
+            const data = snap.val() || [];
+            render(data);
+            const btn = document.getElementById('add-btn');
+            if(btn) {
+                btn.disabled = false;
+                btn.innerText = "データを追加して同期";
+            }
+        });
     }
     window.onload = init;
 
     function autoAdd() {
-        if (!db) return;
-        const title = document.getElementById('new-title').value, 
-              url = document.getElementById('new-url').value, 
-              cat = document.getElementById('new-cat').value;
-        if(!title || !url) return alert("入力してください");
+        const title = document.getElementById('new-title').value;
+        const url = document.getElementById('new-url').value;
+        const cat = document.getElementById('new-cat').value;
+        if(!title || !url) return alert("タイトルとURLを入力してください");
 
         db.ref('rail_auto_sync').once('value').then((snap) => {
             const list = snap.val() || [];
@@ -103,31 +104,35 @@
             db.ref('rail_auto_sync').set(list).then(() => {
                 document.getElementById('new-title').value = "";
                 document.getElementById('new-url').value = "";
+                alert("同期しました！");
             });
         });
     }
 
     function render(data) {
-        // ★'others' をループ対象に追加
-        ['all', 'keio', 'jr', 'others'].forEach(id => {
-            const el = document.getElementById('list-' + id);
-            if(el) el.innerHTML = "";
-        });
+        const categories = ['all', 'keio', 'jr', 'others'];
+        categories.forEach(id => document.getElementById('list-' + id).innerHTML = "");
 
         data.forEach((item, index) => {
+            const tagClass = "tag tag-" + item.cat;
             const html = `
                 <div class="url-item">
-                    <div><b>[${item.cat.toUpperCase()}] ${item.title}</b></div>
-                    <button onclick="autoDelete(${index})" style="color:red; border:none; background:none; cursor:pointer;">削除</button>
+                    <div>
+                        <span class="${tagClass}">${item.cat.toUpperCase()}</span>
+                        <a href="${item.url}" target="_blank" style="text-decoration:none; color:#333; font-weight:bold;">${item.title}</a>
+                    </div>
+                    <button onclick="autoDelete(${index})" style="color:#ff5252; border:none; background:none; cursor:pointer; font-size:12px;">削除</button>
                 </div>`;
+            
             document.getElementById('list-all').innerHTML += html;
-            // カテゴリに一致するリストに挿入
-            const targetList = document.getElementById('list-' + item.cat);
-            if(targetList) targetList.innerHTML += html;
+            if(document.getElementById('list-' + item.cat)) {
+                document.getElementById('list-' + item.cat).innerHTML += html;
+            }
         });
     }
 
     function autoDelete(i) {
+        if(!confirm("この項目を削除しますか？")) return;
         db.ref('rail_auto_sync').once('value').then(s => {
             const l = s.val() || []; 
             l.splice(i, 1); 
@@ -135,7 +140,11 @@
         });
     }
 
-    function autoClear() { if(confirm("全消去しますか？")) db.ref('rail_auto_sync').set([]); }
+    function autoClear() {
+        if(confirm("【警告】すべてのデータが全デバイスから消去されます。よろしいですか？")) {
+            db.ref('rail_auto_sync').set([]);
+        }
+    }
     
     function showPage(id) {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
@@ -144,6 +153,7 @@
         document.getElementById('nav-' + id).classList.add('active');
     }
 
+    // 時計の更新
     setInterval(() => {
         const n = new Date();
         document.getElementById('date').innerText = n.toLocaleDateString();
