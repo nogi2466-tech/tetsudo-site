@@ -63,7 +63,9 @@
 
 <script>
     // ★発行された最新のGAS URL
-    const API_URL = "https://google.com";
+        // 宛先を正しいURLに修正
+    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
+
     
     let railData = JSON.parse(localStorage.getItem('railData') || '[]');
 
