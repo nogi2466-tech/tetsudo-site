@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RailStream - 自動同期</title>
+    <!-- Firebaseライブラリ (最も安定した読み込み方法) -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
     <style>
         :root { --primary-blue: #0078d4; --bg-gray: #f9f9f9; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; }
@@ -41,18 +44,15 @@
         <select id="new-cat"><option value="keio">京王</option><option value="jr">JR</option><option value="others">その他</option></select>
         <input type="text" id="new-title" placeholder="タイトルを入力">
         <input type="text" id="new-url" placeholder="URLを貼り付け">
-        <button id="add-btn" class="btn-main" disabled>接続中...</button>
-        <button id="clear-btn" class="btn-main" style="background:#999; margin-top:20px;">全削除</button>
+        <button id="add-btn" class="btn-main" onclick="autoAdd()" disabled>接続中...</button>
+        <button class="btn-main" style="background:#999; margin-top:20px;" onclick="autoClear()">全削除</button>
     </section>
 
-<script type="module">
-    import { initializeApp } from "https://gstatic.com";
-    import { getDatabase, ref, onValue, set, get } from "https://gstatic.com";
-
+<script>
     const firebaseConfig = {
         apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
-        authDomain: "tetsudo.firebaseapp.com",
-        databaseURL: "https://tetsudo-default-rtdb.firebaseio.com",
+        authDomain: "://firebaseapp.com",
+        databaseURL: "https://firebaseio.com",
         projectId: "tetsudo",
         storageBucket: "tetsudo.firebasestorage.app",
         messagingSenderId: "91814902933",
@@ -60,66 +60,84 @@
         measurementId: "G-MEZNHLIE80"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const dbRef = ref(db, 'rail_auto_sync');
+    let db = null;
 
-    onValue(dbRef, (snapshot) => {
-        const val = snapshot.val();
-        // データベースが「0」や空の場合でも配列として扱う
-        const data = (Array.isArray(val)) ? val : [];
-        render(data);
-        document.getElementById('add-btn').disabled = false;
-        document.getElementById('add-btn').innerText = "データを追加して同期";
-    });
+    function init() {
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            
+            db.ref('rail_auto_sync').on('value', (snap) => {
+                const val = snap.val();
+                let data = [];
+                // データベースが「0」や空の場合の対策
+                if (Array.isArray(val)) data = val;
+                else if (val && typeof val === 'object') data = Object.values(val);
+                
+                render(data);
+                const btn = document.getElementById('add-btn');
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerText = "データを追加して同期";
+                }
+            });
+            console.log("Firebase Ready");
+        } else {
+            setTimeout(init, 500);
+        }
+    }
+    window.onload = init;
 
-    window.autoAdd = async () => {
+    function autoAdd() {
+        if (!db) return;
         const title = document.getElementById('new-title').value;
         const url = document.getElementById('new-url').value;
         const cat = document.getElementById('new-cat').value;
         if(!title || !url) return alert("入力してください");
 
-        const snapshot = await get(dbRef);
-        const val = snapshot.val();
-        const list = (Array.isArray(val)) ? val : [];
-        list.push({ title, url, cat });
-        await set(dbRef, list);
-        
-        document.getElementById('new-title').value = "";
-        document.getElementById('new-url').value = "";
-    };
-
-    window.autoDelete = async (index) => {
-        if(!confirm("削除しますか？")) return;
-        const snapshot = await get(dbRef);
-        const list = snapshot.val() || [];
-        list.splice(index, 1);
-        await set(dbRef, list);
-    };
-
-    document.getElementById('add-btn').onclick = window.autoAdd;
-    document.getElementById('clear-btn').onclick = () => { if(confirm("全消去？")) set(dbRef, []); };
+        db.ref('rail_auto_sync').once('value').then((snap) => {
+            const val = snap.val();
+            const list = (Array.isArray(val)) ? val : (val && typeof val === 'object' ? Object.values(val) : []);
+            list.push({title, url, cat});
+            db.ref('rail_auto_sync').set(list).then(() => {
+                document.getElementById('new-title').value = "";
+                document.getElementById('new-url').value = "";
+            });
+        });
+    }
 
     function render(data) {
         ['all', 'keio', 'jr', 'others'].forEach(id => document.getElementById('list-' + id).innerHTML = "");
         data.forEach((item, index) => {
-            if(!item.title) return; // 不正データ飛ばし
+            if(!item || typeof item !== 'object' || !item.title) return;
             const html = `
                 <div class="url-item">
-                    <div><b>[${item.cat.toUpperCase()}] ${item.title}</b></div>
+                    <div><b>[${item.cat ? item.cat.toUpperCase() : '???'}] ${item.title}</b></div>
                     <button onclick="autoDelete(${index})" style="color:red; border:none; background:none; cursor:pointer;">削除</button>
                 </div>`;
             document.getElementById('list-all').innerHTML += html;
-            if(document.getElementById('list-' + item.cat)) document.getElementById('list-' + item.cat).innerHTML += html;
+            const target = document.getElementById('list-' + item.cat);
+            if(target) target.innerHTML += html;
         });
     }
 
-    window.showPage = (id) => {
+    function autoDelete(i) {
+        db.ref('rail_auto_sync').once('value').then(s => {
+            const val = s.val();
+            const l = (Array.isArray(val)) ? val : Object.values(val);
+            l.splice(i, 1); 
+            db.ref('rail_auto_sync').set(l);
+        });
+    }
+
+    function autoClear() { if(confirm("全消去しますか？")) db.ref('rail_auto_sync').set([]); }
+    
+    function showPage(id) {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.getElementById('nav-' + id).classList.add('active');
-    };
+    }
 
     setInterval(() => {
         const n = new Date();
