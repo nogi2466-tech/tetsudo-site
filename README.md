@@ -13,7 +13,9 @@
             --others-color: #ff8c00; 
         }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; }
-        header { background: linear-gradient(135deg, #333, #666); color: white; padding: 25px 10px; }
+        
+        /* ヘッダーを青色に設定 */
+        header { background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 25px 10px; }
         
         .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; }
         .tag.KEIO { background: var(--keio-color); }
@@ -135,7 +137,11 @@
 
         railData.forEach((item, index) => {
             const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer; font-size:12px;">[削除]</button>` : '';
-            const catLabel = item.cat === 'keio' ? '京王' : item.cat.toUpperCase();
+            
+            // タグの表示名を日本語に変換
+            let catLabel = item.cat.toUpperCase();
+            if(item.cat === 'keio') catLabel = '京王';
+            if(item.cat === 'others') catLabel = 'その他';
             
             const html = `
                 <div class="url-item">
