@@ -1,7 +1,7 @@
 {
   "name": "tetsudo-site",
   "short_name": "鉄道サイト",
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0078d4",
   "theme_color": "#0078d4",
@@ -10,12 +10,13 @@
       "src": "https://icons8.com",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "https://icons8.com",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
