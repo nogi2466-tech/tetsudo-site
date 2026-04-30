@@ -2,8 +2,17 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>tetsudo-site</title>
+    
+    <!-- PWA（アプリ化）用設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="tetsudo-site">
+    <link rel="apple-touch-icon" href="https://icons8.com">
+    <link rel="icon" href="https://icons8.com">
+    <link rel="manifest" href="manifest.json">
+
     <style>
         :root { 
             --primary-blue: #0078d4; 
@@ -12,9 +21,9 @@
             --jr-color: #008000;   
             --others-color: #ff8c00; 
         }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; -webkit-user-select: none; user-select: none; }
         
-        /* ヘッダーを青色に設定 */
+        /* ヘッダー：青色 */
         header { background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 25px 10px; }
         
         .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; }
@@ -31,11 +40,12 @@
         
         .url-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
         .url-info { display: flex; justify-content: space-between; align-items: flex-start; }
+        .url-info b { -webkit-user-select: text; user-select: text; }
         .url-desc { font-size: 12px; color: #666; margin-top: 4px; padding-left: 8px; border-left: 3px solid #eee; }
         
         #admin-controls { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #ddd; }
         .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         
         a { text-decoration: none; color: #333; }
         a:hover { color: var(--primary-blue); }
@@ -59,21 +69,17 @@
 
     <section id="settings">
         <h2>同期と管理</h2>
-        
         <div style="background:#f0f7ff; padding:15px; border-radius:10px; margin-bottom:20px;">
-            <p style="font-size:13px; margin:0 0 10px 0; color:#0056b3;">最新のリストに更新します：</p>
+            <p style="font-size:13px; margin:0 0 10px 0; color:#0056b3;">最新のリストに更新：</p>
             <button class="btn-main" style="background:#4caf50; margin:0;" onclick="syncLoad()">クラウドから読込 (受信)</button>
         </div>
-
         <hr>
-
         <div id="password-area">
             <h3>管理者メニュー</h3>
-            <p style="font-size:13px; color:#666;">追加・削除・保存にはパスワードが必要です。</p>
+            <p style="font-size:13px; color:#666;">パスワードを入力してロック解除：</p>
             <input type="password" id="admin-pw" placeholder="パスワードを入力">
             <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
         </div>
-
         <div id="admin-controls">
             <h3 style="color:var(--primary-blue);">URLを追加</h3>
             <select id="new-cat">
@@ -85,15 +91,18 @@
             <input type="text" id="new-url" placeholder="https://...">
             <textarea id="new-desc" placeholder="動画の説明（任意）" rows="2"></textarea>
             <button class="btn-main" onclick="addItem()">リストに追加</button>
-            
             <hr style="margin:25px 0; border:none; border-top:1px solid #eee;">
-            <h3>クラウドへ保存</h3>
-            <button class="btn-main" id="btn-save" onclick="syncSave()">現在の状態をクラウドに保存 (送信)</button>
+            <h3>クラウド保存</h3>
+            <button class="btn-main" id="btn-save" onclick="syncSave()">現在の状態を保存 (送信)</button>
             <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">全データ削除</button>
         </div>
     </section>
 
 <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+
     const SECRET_PASSWORD = "0829"; 
     const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
     
@@ -101,129 +110,77 @@
     let isAdmin = false;
 
     function unlockAdmin() {
-        const pw = document.getElementById('admin-pw').value;
-        if(pw === SECRET_PASSWORD) {
+        if(document.getElementById('admin-pw').value === SECRET_PASSWORD) {
             isAdmin = true;
             document.getElementById('password-area').style.display = 'none';
             document.getElementById('admin-controls').style.display = 'block';
             render();
-        } else {
-            alert("パスワードが違います");
-        }
+        } else { alert("パスワードが違います"); }
     }
 
     function addItem() {
-        if(!isAdmin) return;
         const title = document.getElementById('new-title').value;
         const url = document.getElementById('new-url').value;
         const cat = document.getElementById('new-cat').value;
         const desc = document.getElementById('new-desc').value;
-        
         if(!title || !url) return alert("タイトルとURLを入力してください");
-
         railData.push({title, url, cat, desc});
-        saveLocal();
-        render();
-        
+        saveLocal(); render();
         document.getElementById('new-title').value = "";
         document.getElementById('new-url').value = "";
         document.getElementById('new-desc').value = "";
-        alert("リストに追加しました。");
     }
 
     function render() {
         const ids = ['all', 'keio', 'jr', 'others'];
         ids.forEach(id => document.getElementById('list-' + id).innerHTML = "");
-
         railData.forEach((item, index) => {
             const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer; font-size:12px;">[削除]</button>` : '';
-            
-            // タグの表示名を日本語に変換
-            let catLabel = item.cat.toUpperCase();
-            if(item.cat === 'keio') catLabel = '京王';
-            if(item.cat === 'others') catLabel = 'その他';
-            
-            const html = `
-                <div class="url-item">
-                    <div class="url-info">
-                        <div>
-                            <span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>
-                            <b><a href="${item.url}" target="_blank">${item.title}</a></b>
-                        </div>
-                        ${deleteBtn}
-                    </div>
-                    ${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}
-                </div>`;
+            let catLabel = item.cat === 'keio' ? '京王' : (item.cat === 'others' ? 'その他' : 'JR');
+            const html = `<div class="url-item"><div class="url-info"><div><span class="tag ${item.cat.toUpperCase()}">${catLabel}</span><b><a href="${item.url}" target="_blank">${item.title}</a></b></div>${deleteBtn}</div>${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}</div>`;
             document.getElementById('list-all').innerHTML += html;
-            if(document.getElementById('list-' + item.cat)) {
-                document.getElementById('list-' + item.cat).innerHTML += html;
-            }
+            if(document.getElementById('list-' + item.cat)) document.getElementById('list-' + item.cat).innerHTML += html;
         });
     }
 
     function deleteItem(index) {
-        if(!isAdmin) return;
         if(!confirm("削除しますか？")) return;
         railData.splice(index, 1);
-        saveLocal();
-        render();
+        saveLocal(); render();
     }
 
-    function saveLocal() {
-        localStorage.setItem('railData', JSON.stringify(railData));
-    }
+    function saveLocal() { localStorage.setItem('railData', JSON.stringify(railData)); }
 
     async function syncSave() {
-        if(!isAdmin) return;
         const btn = document.getElementById('btn-save');
-        btn.innerText = "送信中...";
-        btn.disabled = true;
+        btn.innerText = "送信中..."; btn.disabled = true;
         try {
-            await fetch(API_URL, { 
-                method: "POST", 
-                body: JSON.stringify({ action: "save", data: railData }) 
-            });
+            await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "save", data: railData }) });
             alert("クラウドに保存しました！");
-        } catch (e) { 
-            alert("保存に失敗しました。"); 
-        } finally {
-            btn.innerText = "現在の状態をクラウドに保存 (送信)";
-            btn.disabled = false;
-        }
+        } catch (e) { alert("保存に失敗しました。"); }
+        finally { btn.innerText = "現在の状態を保存 (送信)"; btn.disabled = false; }
     }
 
     async function syncLoad() {
         const btn = event.target;
-        const originalText = btn.innerText;
+        const oldText = btn.innerText;
         btn.innerText = "受信中...";
         try {
             const res = await fetch(API_URL);
             const json = await res.json();
             if (json && Array.isArray(json.data)) {
-                railData = json.data;
-                saveLocal();
-                render();
-                alert("最新データを取得しました！");
+                railData = json.data; saveLocal(); render(); alert("読み込み完了！");
             }
-        } catch (e) { 
-            alert("データの読込に失敗しました。"); 
-        } finally {
-            btn.innerText = originalText;
-        }
+        } catch (e) { alert("読込失敗"); }
+        finally { btn.innerText = oldText; }
     }
 
     function clearAll() {
-        if(!isAdmin) return;
-        if(confirm("全消去しますか？")) {
-            railData = [];
-            saveLocal();
-            render();
-        }
+        if(confirm("全消去しますか？")) { railData = []; saveLocal(); render(); }
     }
 
     function showPage(id) {
-        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('section, nav button').forEach(el => el.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.getElementById('nav-' + id).classList.add('active');
     }
