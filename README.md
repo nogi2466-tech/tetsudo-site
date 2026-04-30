@@ -9,27 +9,41 @@
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <!-- アイコンURLを画像ファイルに修正 -->
     <link rel="apple-touch-icon" href="https://icons8.com">
     <link rel="icon" href="https://icons8.com">
 
     <style>
-        :root { --primary-blue: #0078d4; --bg-gray: #f9f9f9; --keio-color: #e60012; --jr-color: #008000; --others-color: #ff8c00; }
+        :root { 
+            --primary-blue: #0078d4; 
+            --bg-gray: #f9f9f9; 
+            --keio-color: #e60012; 
+            --jr-color: #008000; 
+            --files-color: #607d8b; 
+            --others-color: #ff8c00; 
+        }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; -webkit-user-select: none; user-select: none; }
         header { background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 25px 10px; }
         .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; }
         .tag.KEIO { background: var(--keio-color); }
         .tag.JR { background: var(--jr-color); }
+        .tag.FILES { background: var(--files-color); }
         .tag.OTHERS { background: var(--others-color); }
+        
+        .is-secret { border-left: 5px solid #ff5722 !important; background-color: #fff9f8; }
+        .secret-badge { font-size: 10px; background: #ff5722; color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
+
         nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: center; overflow-x: auto; }
         nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 15px; cursor: pointer; border-radius: 20px; white-space: nowrap; }
         nav button.active { background: var(--primary-blue); color: white; font-weight: bold; }
+        
         section { display: none; max-width: 500px; margin: 20px auto; padding: 20px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: left; }
         section.active { display: block; }
+        
         .url-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
         .url-info { display: flex; justify-content: space-between; align-items: flex-start; }
         .url-info b { -webkit-user-select: text; user-select: text; }
         .url-desc { font-size: 12px; color: #666; margin-top: 4px; padding-left: 8px; border-left: 3px solid #eee; }
+        
         #admin-controls { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #ddd; }
         .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
         input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
@@ -43,13 +57,15 @@
         <button onclick="showPage('all')" id="nav-all" class="active">すべて</button>
         <button onclick="showPage('keio')" id="nav-keio">京王</button>
         <button onclick="showPage('jr')" id="nav-jr">JR線</button>
+        <button onclick="showPage('files')" id="nav-files">資料</button>
         <button onclick="showPage('others')" id="nav-others">その他</button>
         <button onclick="showPage('settings')" id="nav-settings">同期・管理</button>
     </nav>
 
-    <section id="all" class="active"><h2>すべての動画</h2><div id="list-all"></div></section>
+    <section id="all" class="active"><h2>すべてのリスト</h2><div id="list-all"></div></section>
     <section id="keio"><h2>京王線</h2><div id="list-keio"></div></section>
     <section id="jr"><h2>JR線</h2><div id="list-jr"></div></section>
+    <section id="files"><h2>資料</h2><div id="list-files"></div></section>
     <section id="others"><h2>その他</h2><div id="list-others"></div></section>
 
     <section id="settings">
@@ -61,8 +77,18 @@
             <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
         </div>
         <div id="admin-controls">
-            <select id="new-cat"><option value="keio">京王</option><option value="jr">JR</option><option value="others">その他</option></select>
-            <input type="text" id="new-title" placeholder="タイトル"><input type="text" id="new-url" placeholder="URL"><textarea id="new-desc" placeholder="説明" rows="2"></textarea>
+            <select id="new-cat">
+                <option value="keio">京王</option>
+                <option value="jr">JR</option>
+                <option value="files">資料</option>
+                <option value="others">その他</option>
+            </select>
+            <input type="text" id="new-title" placeholder="タイトル">
+            <input type="text" id="new-url" placeholder="URL">
+            <textarea id="new-desc" placeholder="説明" rows="2"></textarea>
+            <label style="font-size:14px; display:block; margin: 10px 0; text-align: left;">
+                <input type="checkbox" id="new-secret" style="width:auto; vertical-align: middle;"> パスワード解除時のみ表示（非公開）
+            </label>
             <button class="btn-main" onclick="addItem()">リストに追加</button>
             <button class="btn-main" id="btn-save" onclick="syncSave()">現在の状態を保存 (送信)</button>
             <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">全削除</button>
@@ -75,7 +101,8 @@
     }
 
     const SECRET_PASSWORD = "0829"; 
-    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
+    // 指定された正しいAPI URLに固定しました
+    const API_URL = "https://google.com";
     
     let railData = JSON.parse(localStorage.getItem('railData') || '[]');
     let isAdmin = false;
@@ -94,25 +121,38 @@
         const url = document.getElementById('new-url').value;
         const cat = document.getElementById('new-cat').value;
         const desc = document.getElementById('new-desc').value;
-        if(!title || !url) return alert("入力してください");
-        railData.push({title, url, cat, desc});
+        const secret = document.getElementById('new-secret').checked;
+        if(!title || !url) return alert("タイトルとURLを入力してください");
+        railData.push({title, url, cat, desc, secret});
         saveLocal(); render();
+        document.getElementById('new-title').value = "";
+        document.getElementById('new-url').value = "";
+        document.getElementById('new-desc').value = "";
+        document.getElementById('new-secret').checked = false;
     }
 
     function render() {
-        const ids = ['all', 'keio', 'jr', 'others'];
-        ids.forEach(id => document.getElementById('list-' + id).innerHTML = "");
+        const ids = ['all', 'keio', 'jr', 'files', 'others'];
+        ids.forEach(id => {
+            const el = document.getElementById('list-' + id);
+            if(el) el.innerHTML = "";
+        });
+
         railData.forEach((item, index) => {
-            const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none;">[削除]</button>` : '';
-            let catLabel = item.cat === 'keio' ? '京王' : (item.cat === 'others' ? 'その他' : 'JR');
-            const html = `<div class="url-item"><div class="url-info"><div><span class="tag ${item.cat.toUpperCase()}">${catLabel}</span><b><a href="${item.url}" target="_blank">${item.title}</a></b></div>${deleteBtn}</div>${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}</div>`;
+            if (item.secret && !isAdmin) return;
+            const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">[削除]</button>` : '';
+            const secretBadge = item.secret ? `<span class="secret-badge">非公開中</span>` : '';
+            const secretClass = item.secret ? 'is-secret' : '';
+            let catLabel = {keio:'京王', jr:'JR', files:'資料', others:'その他'}[item.cat] || '他';
+            const html = `<div class="url-item ${secretClass}"><div class="url-info"><div><span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>${secretBadge}<b><a href="${item.url}" target="_blank">${item.title}</a></b></div>${deleteBtn}</div>${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}</div>`;
             document.getElementById('list-all').innerHTML += html;
-            if(document.getElementById('list-' + item.cat)) document.getElementById('list-' + item.cat).innerHTML += html;
+            const targetList = document.getElementById('list-' + item.cat);
+            if(targetList) targetList.innerHTML += html;
         });
     }
 
     function deleteItem(index) {
-        if(!confirm("削除？")) return;
+        if(!confirm("本当に削除しますか？")) return;
         railData.splice(index, 1);
         saveLocal(); render();
     }
@@ -123,8 +163,8 @@
         const btn = document.getElementById('btn-save'); btn.innerText = "送信中...";
         try {
             await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "save", data: railData }) });
-            alert("保存しました！");
-        } catch (e) { alert("失敗"); }
+            alert("保存完了しました！");
+        } catch (e) { alert("失敗しました"); }
         finally { btn.innerText = "現在の状態を保存 (送信)"; }
     }
 
@@ -143,7 +183,6 @@
         document.getElementById(id).classList.add('active');
         document.getElementById('nav-' + id).classList.add('active');
     }
-
     window.onload = render;
 </script>
 </body>
