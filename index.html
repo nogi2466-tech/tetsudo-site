@@ -29,10 +29,9 @@
         .tag.FILES { background: var(--files-color); }
         .tag.OTHERS { background: var(--others-color); }
         
-        /* 管理者用：非公開中や資料タブの特別な見た目 */
+        /* 管理者用の非公開スタイル */
         .is-secret { border-left: 5px solid #ff5722 !important; background-color: #fff9f8; }
         .secret-badge { font-size: 10px; background: #ff5722; color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
-        #nav-files { display: none; } /* 初期状態では「資料」ボタンを隠す */
 
         nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: center; overflow-x: auto; }
         nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 15px; cursor: pointer; border-radius: 20px; white-space: nowrap; }
@@ -59,7 +58,7 @@
         <button onclick="showPage('all')" id="nav-all" class="active">すべて</button>
         <button onclick="showPage('keio')" id="nav-keio">京王</button>
         <button onclick="showPage('jr')" id="nav-jr">JR線</button>
-        <button onclick="showPage('files')" id="nav-files">資料</button> <!-- 管理者のみ表示 -->
+        <button onclick="showPage('files')" id="nav-files">資料</button>
         <button onclick="showPage('others')" id="nav-others">その他</button>
         <button onclick="showPage('settings')" id="nav-settings">同期・管理</button>
     </nav>
@@ -67,7 +66,7 @@
     <section id="all" class="active"><h2>すべてのリスト</h2><div id="list-all"></div></section>
     <section id="keio"><h2>京王線</h2><div id="list-keio"></div></section>
     <section id="jr"><h2>JR線</h2><div id="list-jr"></div></section>
-    <section id="files"><h2>非公開資料</h2><div id="list-files"></div></section>
+    <section id="files"><h2>資料</h2><div id="list-files"></div></section>
     <section id="others"><h2>その他</h2><div id="list-others"></div></section>
 
     <section id="settings">
@@ -79,18 +78,17 @@
             <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
         </div>
         <div id="admin-controls">
-            <p style="font-size:12px; color:red;">※「資料」カテゴリーは常にパスワード保護されます</p>
             <select id="new-cat">
                 <option value="keio">京王</option>
                 <option value="jr">JR</option>
-                <option value="files">資料 (基本非公開)</option>
+                <option value="files">資料</option>
                 <option value="others">その他</option>
             </select>
             <input type="text" id="new-title" placeholder="タイトル">
             <input type="text" id="new-url" placeholder="URL">
             <textarea id="new-desc" placeholder="説明" rows="2"></textarea>
-            <label id="secret-wrap" style="font-size:14px; display:block; margin: 10px 0; text-align: left;">
-                <input type="checkbox" id="new-secret" style="width:auto; vertical-align: middle;"> 公開リストにも表示する (公開設定)
+            <label style="font-size:14px; display:block; margin: 10px 0; text-align: left;">
+                <input type="checkbox" id="new-secret" style="width:auto; vertical-align: middle;"> 管理者のみ表示する (非公開設定)
             </label>
             <button class="btn-main" onclick="addItem()">リストに追加</button>
             <button class="btn-main" id="btn-save" onclick="syncSave()">現在の状態を保存 (送信)</button>
@@ -104,7 +102,7 @@
     }
 
     const SECRET_PASSWORD = "0829"; 
-    const API_URL = "https://google.com";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
     
     let railData = JSON.parse(localStorage.getItem('railData') || '[]');
     let isAdmin = false;
@@ -114,7 +112,6 @@
             isAdmin = true;
             document.getElementById('password-area').style.display = 'none';
             document.getElementById('admin-controls').style.display = 'block';
-            document.getElementById('nav-files').style.display = 'inline-block'; // 資料タブを表示
             render();
         } else { alert("パスワード違います"); }
     }
@@ -124,15 +121,10 @@
         const url = document.getElementById('new-url').value;
         const cat = document.getElementById('new-cat').value;
         const desc = document.getElementById('new-desc').value;
-        // 「公開設定」にチェックがない ＝ secretプロパティをtrueにする
-        const isPublic = document.getElementById('new-secret').checked;
-        const secret = !isPublic; 
-        
-        if(!title || !url) return alert("入力してください");
-        
+        const secret = document.getElementById('new-secret').checked;
+        if(!title || !url) return alert("タイトルとURLを入力してください");
         railData.push({title, url, cat, desc, secret});
         saveLocal(); render();
-        
         document.getElementById('new-title').value = "";
         document.getElementById('new-url').value = "";
         document.getElementById('new-desc').value = "";
@@ -147,32 +139,13 @@
         });
 
         railData.forEach((item, index) => {
-            // 資料(files)カテゴリー、または非公開設定(secret)のものは管理者以外には見せない
-            const isFilesCat = (item.cat === 'files');
-            if ((isFilesCat || item.secret) && !isAdmin) return;
-
+            if (item.secret && !isAdmin) return;
             const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">[削除]</button>` : '';
             const secretBadge = item.secret ? `<span class="secret-badge">非公開中</span>` : '';
             const secretClass = item.secret ? 'is-secret' : '';
-
             let catLabel = {keio:'京王', jr:'JR', files:'資料', others:'その他'}[item.cat] || '他';
-            
-            const html = `
-                <div class="url-item ${secretClass}">
-                    <div class="url-info">
-                        <div>
-                            <span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>
-                            ${secretBadge}
-                            <b><a href="${item.url}" target="_blank">${item.title}</a></b>
-                        </div>
-                        ${deleteBtn}
-                    </div>
-                    ${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}
-                </div>`;
-
-            // 「すべて」のリストには公開分のみ（管理者は全部）
+            const html = `<div class="url-item ${secretClass}"><div class="url-info"><div><span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>${secretBadge}<b><a href="${item.url}" target="_blank">${item.title}</a></b></div>${deleteBtn}</div>${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}</div>`;
             document.getElementById('list-all').innerHTML += html;
-            // 各カテゴリーのリストに追加
             const targetList = document.getElementById('list-' + item.cat);
             if(targetList) targetList.innerHTML += html;
         });
@@ -199,13 +172,7 @@
         try {
             const res = await fetch(API_URL);
             const json = await res.json();
-            if (json && Array.isArray(json.data)) { 
-                railData = json.data; 
-                saveLocal(); 
-                // もし読み込んだデータに資料が含まれていても、isAdminがfalseなら表示されない
-                render(); 
-                alert("クラウドから読込完了！"); 
-            }
+            if (json && Array.isArray(json.data)) { railData = json.data; saveLocal(); render(); alert("読込完了！"); }
         } catch (e) { alert("読込失敗"); }
     }
 
@@ -217,7 +184,6 @@
         const navBtn = document.getElementById('nav-' + id);
         if(navBtn) navBtn.classList.add('active');
     }
-
     window.onload = render;
 </script>
 </body>
