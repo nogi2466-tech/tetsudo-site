@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>tetsudo-site</title>
     
-    <!-- PWA（アプリ化）用設定 -->
+    <!-- PWA（本物のアプリにするための設定） -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="tetsudo-site">
     <link rel="apple-touch-icon" href="https://icons8.com">
     <link rel="icon" href="https://icons8.com">
+    <!-- 設計図 manifest.json の読み込み -->
     <link rel="manifest" href="manifest.json">
 
     <style>
@@ -76,7 +76,7 @@
         <hr>
         <div id="password-area">
             <h3>管理者メニュー</h3>
-            <p style="font-size:13px; color:#666;">パスワードを入力してロック解除：</p>
+            <p style="font-size:13px; color:#666;">パスワード(0829)を入力してロック解除：</p>
             <input type="password" id="admin-pw" placeholder="パスワードを入力">
             <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
         </div>
@@ -99,8 +99,11 @@
     </section>
 
 <script>
+    // Service Workerの登録
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
+        navigator.serviceWorker.register('sw.js').then(() => {
+            console.log("Service Worker Registered");
+        });
     }
 
     const SECRET_PASSWORD = "0829"; 
