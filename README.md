@@ -3,27 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RailStream - GAS Sync Edition</title>
+    <title>tetsudo-site</title>
     <style>
-        :root { --primary-blue: #0078d4; --bg-gray: #f9f9f9; --accent-green: #4caf50; }
+        /* 基本設定 */
+        :root { 
+            --primary-blue: #0078d4; 
+            --bg-gray: #f9f9f9; 
+            --keio-color: #e60012; /* 京王: 赤 */
+            --jr-color: #008000;   /* JR: 緑 */
+            --others-color: #ff8c00; /* その他: オレンジ */
+        }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; }
-        header { background: linear-gradient(135deg, #0078d4, #00b0ff); color: white; padding: 25px 10px; }
+        header { background: linear-gradient(135deg, #333, #666); color: white; padding: 25px 10px; }
+        
+        /* 項目別の色分け設定 */
+        .tag.KEIO { background: var(--keio-color); }
+        .tag.JR { background: var(--jr-color); }
+        .tag.OTHERS { background: var(--others-color); }
+        
         nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: center; overflow-x: auto; }
         nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 15px; cursor: pointer; border-radius: 20px; white-space: nowrap; }
         nav button.active { background: var(--primary-blue); color: white; font-weight: bold; }
+        
         section { display: none; max-width: 500px; margin: 20px auto; padding: 20px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: left; }
         section.active { display: block; }
-        .url-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        
+        .url-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .url-info { display: flex; justify-content: space-between; align-items: flex-start; }
+        .url-desc { font-size: 12px; color: #666; margin-top: 4px; padding-left: 5px; border-left: 2px solid #ddd; }
+        
         .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        .clock { background: #e1f5fe; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
-        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; background: #666; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+        
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; }
         a { text-decoration: none; color: #333; }
         a:hover { color: var(--primary-blue); }
+        
+        .lock-notice { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; text-align: center; }
     </style>
 </head>
 <body>
-    <header><h1>RailStream</h1></header>
+    <header><h1>tetsudo-site</h1></header>
     
     <nav>
         <button onclick="showPage('all')" id="nav-all" class="active">すべて</button>
@@ -40,10 +60,10 @@
 
     <section id="settings">
         <h2>データ追加・同期</h2>
-        <div class="clock">
-            <div id="date">----/--/--</div>
-            <div id="time" style="font-size:24px; font-weight:bold;">00:00:00</div>
-        </div>
+        <div class="lock-notice">追加・削除にはパスワードが必要です</div>
+        
+        <input type="password" id="admin-pw" placeholder="パスワードを入力">
+        <hr>
         
         <select id="new-cat">
             <option value="keio">京王</option>
@@ -52,36 +72,51 @@
         </select>
         <input type="text" id="new-title" placeholder="タイトルを入力">
         <input type="text" id="new-url" placeholder="URLを貼り付け">
+        <textarea id="new-desc" placeholder="動画の説明（任意）" rows="2"></textarea>
         <button class="btn-main" onclick="addItem()">リストに追加</button>
         
         <hr style="margin:25px 0; border:none; border-top:1px solid #eee;">
         
         <button class="btn-main" onclick="syncSave()">クラウドに保存 (送信)</button>
-        <button class="btn-main" style="background:var(--accent-green);" onclick="syncLoad()">クラウドから読込 (受信)</button>
+        <button class="btn-main" style="background:#4caf50;" onclick="syncLoad()">クラウドから読込 (受信)</button>
         <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">全データ削除</button>
     </section>
 
 <script>
-    // ★発行された最新のGAS URL
-        // 宛先を正しいURLに修正
-    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
+    // ★設定: パスワード (自由に変更してください)
+    const SECRET_PASSWORD = "tetsudo-admin"; 
 
+    const API_URL = "https://google.com";
     
     let railData = JSON.parse(localStorage.getItem('railData') || '[]');
 
+    function checkPassword() {
+        const pw = document.getElementById('admin-pw').value;
+        if(pw !== SECRET_PASSWORD) {
+            alert("パスワードが正しくありません");
+            return false;
+        }
+        return true;
+    }
+
     function addItem() {
+        if(!checkPassword()) return;
+
         const title = document.getElementById('new-title').value;
         const url = document.getElementById('new-url').value;
         const cat = document.getElementById('new-cat').value;
+        const desc = document.getElementById('new-desc').value;
+        
         if(!title || !url) return alert("タイトルとURLを入力してください");
 
-        railData.push({title, url, cat});
+        railData.push({title, url, cat, desc});
         saveLocal();
         render();
         
         document.getElementById('new-title').value = "";
         document.getElementById('new-url').value = "";
-        alert("追加しました。保存ボタンでクラウドに同期してください。");
+        document.getElementById('new-desc').value = "";
+        alert("追加しました。");
     }
 
     function render() {
@@ -91,11 +126,14 @@
         railData.forEach((item, index) => {
             const html = `
                 <div class="url-item">
-                    <div>
-                        <span class="tag">${item.cat.toUpperCase()}</span>
-                        <b><a href="${item.url}" target="_blank">${item.title}</a></b>
+                    <div class="url-info">
+                        <div>
+                            <span class="tag ${item.cat.toUpperCase()}">${item.cat.toUpperCase()}</span>
+                            <b><a href="${item.url}" target="_blank">${item.title}</a></b>
+                        </div>
+                        <button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer; font-size:12px;">[削除]</button>
                     </div>
-                    <button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">削除</button>
+                    ${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}
                 </div>`;
             document.getElementById('list-all').innerHTML += html;
             if(document.getElementById('list-' + item.cat)) {
@@ -105,7 +143,8 @@
     }
 
     function deleteItem(index) {
-        if(!confirm("削除しますか？")) return;
+        if(!checkPassword()) return;
+        if(!confirm("本当に削除しますか？")) return;
         railData.splice(index, 1);
         saveLocal();
         render();
@@ -117,30 +156,27 @@
 
     // --- 同期機能 ---
     async function syncSave() {
+        if(!checkPassword()) return;
         const btn = event.target;
-        const originalText = btn.innerText;
         btn.innerText = "送信中...";
         btn.disabled = true;
 
         try {
-            // GASへデータを送信
             await fetch(API_URL, {
                 method: "POST",
                 body: JSON.stringify({ action: "save", data: railData })
             });
             alert("クラウドに保存しました！");
         } catch (e) {
-            console.error(e);
-            alert("保存に失敗しました。GASの設定（全員への公開）を確認してください。");
+            alert("保存に失敗しました。");
         } finally {
-            btn.innerText = originalText;
+            btn.innerText = "クラウドに保存 (送信)";
             btn.disabled = false;
         }
     }
 
     async function syncLoad() {
         const btn = event.target;
-        const originalText = btn.innerText;
         btn.innerText = "受信中...";
         btn.disabled = true;
 
@@ -154,15 +190,15 @@
                 alert("最新データを読み込みました！");
             }
         } catch (e) {
-            console.error(e);
             alert("読込に失敗しました。");
         } finally {
-            btn.innerText = originalText;
+            btn.innerText = "クラウドから読込 (受信)";
             btn.disabled = false;
         }
     }
 
     function clearAll() {
+        if(!checkPassword()) return;
         if(confirm("全データを削除しますか？")) {
             railData = [];
             saveLocal();
@@ -177,15 +213,8 @@
         document.getElementById('nav-' + id).classList.add('active');
     }
 
-    function init() {
-        render();
-        setInterval(() => {
-            const n = new Date();
-            document.getElementById('date').innerText = n.toLocaleDateString();
-            document.getElementById('time').innerText = n.toLocaleTimeString();
-        }, 1000);
-    }
-    window.onload = init;
+    window.onload = render;
 </script>
 </body>
 </html>
+
