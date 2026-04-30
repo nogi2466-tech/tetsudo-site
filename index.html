@@ -8,9 +8,9 @@
         :root { 
             --primary-blue: #0078d4; 
             --bg-gray: #f9f9f9; 
-            --keio-color: #e60012; /* 京王: 赤 */
-            --jr-color: #008000;   /* JR: 緑 */
-            --others-color: #ff8c00; /* その他: オレンジ */
+            --keio-color: #e60012; 
+            --jr-color: #008000;   
+            --others-color: #ff8c00; 
         }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; }
         header { background: linear-gradient(135deg, #333, #666); color: white; padding: 25px 10px; }
@@ -31,7 +31,6 @@
         .url-info { display: flex; justify-content: space-between; align-items: flex-start; }
         .url-desc { font-size: 12px; color: #666; margin-top: 4px; padding-left: 8px; border-left: 3px solid #eee; }
         
-        /* 管理画面の制御 */
         #admin-controls { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #ddd; }
         .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
         input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
@@ -59,7 +58,6 @@
     <section id="settings">
         <h2>同期と管理</h2>
         
-        <!-- 受信ボタンは常に表示（パスワード不要） -->
         <div style="background:#f0f7ff; padding:15px; border-radius:10px; margin-bottom:20px;">
             <p style="font-size:13px; margin:0 0 10px 0; color:#0056b3;">最新のリストに更新します：</p>
             <button class="btn-main" style="background:#4caf50; margin:0;" onclick="syncLoad()">クラウドから読込 (受信)</button>
@@ -67,7 +65,6 @@
 
         <hr>
 
-        <!-- 管理者認証エリア -->
         <div id="password-area">
             <h3>管理者メニュー</h3>
             <p style="font-size:13px; color:#666;">追加・削除・保存にはパスワードが必要です。</p>
@@ -75,7 +72,6 @@
             <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
         </div>
 
-        <!-- 正解時のみ表示される追加・削除・保存エリア -->
         <div id="admin-controls">
             <h3 style="color:var(--primary-blue);">URLを追加</h3>
             <select id="new-cat">
@@ -90,19 +86,18 @@
             
             <hr style="margin:25px 0; border:none; border-top:1px solid #eee;">
             <h3>クラウドへ保存</h3>
-            <button class="btn-main" onclick="syncSave()">現在の状態をクラウドに保存 (送信)</button>
+            <button class="btn-main" id="btn-save" onclick="syncSave()">現在の状態をクラウドに保存 (送信)</button>
             <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">全データ削除</button>
         </div>
     </section>
 
 <script>
     const SECRET_PASSWORD = "0829"; 
-    const API_URL = "https://google.com";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
     
     let railData = JSON.parse(localStorage.getItem('railData') || '[]');
     let isAdmin = false;
 
-    // 管理画面のロック解除
     function unlockAdmin() {
         const pw = document.getElementById('admin-pw').value;
         if(pw === SECRET_PASSWORD) {
@@ -131,7 +126,7 @@
         document.getElementById('new-title').value = "";
         document.getElementById('new-url').value = "";
         document.getElementById('new-desc').value = "";
-        alert("リストに追加しました。最後に「クラウドに保存」を忘れないでください。");
+        alert("リストに追加しました。");
     }
 
     function render() {
@@ -140,12 +135,13 @@
 
         railData.forEach((item, index) => {
             const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer; font-size:12px;">[削除]</button>` : '';
+            const catLabel = item.cat === 'keio' ? '京王' : item.cat.toUpperCase();
             
             const html = `
                 <div class="url-item">
                     <div class="url-info">
                         <div>
-                            <span class="tag ${item.cat.toUpperCase()}">${item.cat.toUpperCase() === 'KEIO' ? '京王' : item.cat.toUpperCase()}</span>
+                            <span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>
                             <b><a href="${item.url}" target="_blank">${item.title}</a></b>
                         </div>
                         ${deleteBtn}
@@ -173,14 +169,21 @@
 
     async function syncSave() {
         if(!isAdmin) return;
-        const btn = event.target;
-        const originalText = btn.innerText;
+        const btn = document.getElementById('btn-save');
         btn.innerText = "送信中...";
+        btn.disabled = true;
         try {
-            await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "save", data: railData }) });
+            await fetch(API_URL, { 
+                method: "POST", 
+                body: JSON.stringify({ action: "save", data: railData }) 
+            });
             alert("クラウドに保存しました！");
-        } catch (e) { alert("保存に失敗しました。"); }
-        btn.innerText = originalText;
+        } catch (e) { 
+            alert("保存に失敗しました。"); 
+        } finally {
+            btn.innerText = "現在の状態をクラウドに保存 (送信)";
+            btn.disabled = false;
+        }
     }
 
     async function syncLoad() {
@@ -196,8 +199,11 @@
                 render();
                 alert("最新データを取得しました！");
             }
-        } catch (e) { alert("データの読込に失敗しました。"); }
-        btn.innerText = originalText;
+        } catch (e) { 
+            alert("データの読込に失敗しました。"); 
+        } finally {
+            btn.innerText = originalText;
+        }
     }
 
     function clearAll() {
