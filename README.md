@@ -1,183 +1,147 @@
-[<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鉄道ポータル - クラウド同期</title>
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0078d4">
+    <title>tetsudo-site</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://icons8.com">
+    <link rel="icon" href="https://icons8.com">
+
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 80px; color: #333; }
-        header { background: #333; color: white; padding: 20px; text-align: center; }
-        nav { display: flex; justify-content: center; gap: 8px; background: white; padding: 10px; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 1000; }
-        .nav-btn { border: 1px solid #ddd; background: white; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-        .nav-btn.active { background: #e50914; color: white; border-color: #e50914; }
-        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+        :root { 
+            --primary-blue: #0078d4; 
+            --bg-gray: #f9f9f9; 
+            --keio-color: #e60012; 
+            --jr-color: #008000; 
+            --files-color: #607d8b; 
+            --others-color: #ff8c00; 
+        }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; -webkit-user-select: none; user-select: none; }
+        header { background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 25px 10px; }
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; }
+        .tag.KEIO { background: var(--keio-color); }
+        .tag.JR { background: var(--jr-color); }
+        .tag.FILES { background: var(--files-color); }
+        .tag.OTHERS { background: var(--others-color); }
+        
+        /* 管理者用の非公開スタイル */
+        .is-secret { border-left: 5px solid #ff5722 !important; background-color: #fff9f8; }
+        .secret-badge { font-size: 10px; background: #ff5722; color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
 
-        /* 同期キー入力エリア（パスワードなしで表示） */
-        .sync-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .sync-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; display: block; }
-        .sync-input-row { display: flex; gap: 8px; }
-        .sync-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-        .sync-btn { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-
-        /* 管理パネル（パスワード 0829 で表示） */
-        #edit-panel { display: none; background: #fffbe6; padding: 20px; border: 2px dashed #ffe58f; border-radius: 12px; margin-bottom: 20px; }
-        .input-row { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .save-btn { background: #28a745; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-
-        .link-item { background: white; border: 1px solid #eee; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .open-btn { background: #e50914; color: white; text-decoration: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: center; overflow-x: auto; }
+        nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 15px; cursor: pointer; border-radius: 20px; white-space: nowrap; }
+        nav button.active { background: var(--primary-blue); color: white; font-weight: bold; }
+        
+        section { display: none; max-width: 500px; margin: 20px auto; padding: 20px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: left; }
+        section.active { display: block; }
+        
+        .url-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .url-info { display: flex; justify-content: space-between; align-items: flex-start; }
+        .url-info b { -webkit-user-select: text; user-select: text; }
+        .url-desc { font-size: 12px; color: #666; margin-top: 4px; padding-left: 8px; border-left: 3px solid #eee; }
+        
+        #admin-controls { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #ddd; }
+        .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        a { text-decoration: none; color: #333; }
+        a:hover { color: var(--primary-blue); }
     </style>
 </head>
 <body>
+    <header><h1>tetsudo-site</h1></header>
+    <nav>
+        <button onclick="showPage('all')" id="nav-all" class="active">すべて</button>
+        <button onclick="showPage('keio')" id="nav-keio">京王</button>
+        <button onclick="showPage('jr')" id="nav-jr">JR線</button>
+        <button onclick="showPage('files')" id="nav-files">資料</button>
+        <button onclick="showPage('others')" id="nav-others">その他</button>
+        <button onclick="showPage('settings')" id="nav-settings">同期・管理</button>
+    </nav>
 
-<header><h1>鉄道動画ポータル</h1></header>
+    <section id="all" class="active"><h2>すべてのリスト</h2><div id="list-all"></div></section>
+    <section id="keio"><h2>京王線</h2><div id="list-keio"></div></section>
+    <section id="jr"><h2>JR線</h2><div id="list-jr"></div></section>
+    <section id="files"><h2>資料</h2><div id="list-files"></div></section>
+    <section id="others"><h2>その他</h2><div id="list-others"></div></section>
 
-<nav>
-    <button onclick="changeTab('keio')" id="btn-keio" class="nav-btn">京王線</button>
-    <button onclick="changeTab('jr')" id="btn-jr" class="nav-btn">JR</button>
-    <button onclick="changeTab('other')" id="btn-other" class="nav-btn">その他</button>
-    <button onclick="askPassword()" id="btn-lock" class="nav-btn">⚙️</button>
-</nav>
-
-<div class="container">
-    <!-- 同期キーエリア：パスワードなしで常時表示 -->
-    <div class="sync-card">
-        <label class="sync-label">🔄 同期キー（合言葉）を入力して開始</label>
-        <div class="sync-input-row">
-            <input type="text" id="sync-key" class="sync-input" placeholder="例：123456789wo">
-            <button onclick="connectSync()" class="sync-btn">同期</button>
+    <section id="settings">
+        <h2>同期と管理</h2>
+        <button class="btn-main" style="background:#4caf50;" onclick="syncLoad()">クラウドから読込 (受信)</button>
+        <hr>
+        <div id="password-area">
+            <input type="password" id="admin-pw" placeholder="パスワード(0829)">
+            <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
         </div>
-    </div>
-
-    <!-- 管理用：パスワード 0829 のときだけ表示 -->
-    <div id="edit-panel">
-        <h4 style="margin:0 0 10px 0; color: #856404;">➕ 新規追加</h4>
-        <div class="input-row">
-            <input type="text" id="new-title" placeholder="動画のタイトル">
-            <input type="text" id="new-url" placeholder="YouTube URL">
-            <button onclick="saveItem()" class="save-btn">クラウドに保存</button>
+        <div id="admin-controls">
+            <select id="new-cat">
+                <option value="keio">京王</option>
+                <option value="jr">JR</option>
+                <option value="files">資料</option>
+                <option value="others">その他</option>
+            </select>
+            <input type="text" id="new-title" placeholder="タイトル">
+            <input type="text" id="new-url" placeholder="URL">
+            <textarea id="new-desc" placeholder="説明" rows="2"></textarea>
+            <label style="font-size:14px; display:block; margin: 10px 0; text-align: left;">
+                <input type="checkbox" id="new-secret" style="width:auto; vertical-align: middle;"> 管理者のみ表示する (非公開設定)
+            </label>
+            <button class="btn-main" onclick="addItem()">リストに追加</button>
+            <button class="btn-main" id="btn-save" onclick="syncSave()">現在の状態を保存 (送信)</button>
+            <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">全削除</button>
         </div>
-        <button onclick="resetData()" style="width:100%; margin-top:15px; background:#777; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer;">全データ初期化</button>
-    </div>
-
-    <div id="keio" class="tab-content"></div>
-    <div id="jr" class="tab-content"></div>
-    <div id="other" class="tab-content"></div>
-</div>
+    </section>
 
 <script>
-    var currentTab = 'keio';
-    var isAdmin = false;
-    var database = null;
-    var currentSyncKey = "";
-    var localData = { keio: [], jr: [], other: [] };
-
-    const config = {
-        apiKey: "AIzaSyAe_KxKH-06cxEOJ0GCtCEnM2xqjMcr-Rc",
-        databaseURL: "https://firebaseio.com",
-        projectId: "tetsudo"
-    };
-
-    function initApp() {
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(config);
-            database = firebase.database();
-            
-            const savedKey = localStorage.getItem('last_sync_key');
-            if (savedKey) {
-                document.getElementById('sync-key').value = savedKey;
-                connectSync(true);
-            }
-        } else {
-            setTimeout(initApp, 500);
-        }
-        changeTab('keio');
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered"));
     }
 
-    function connectSync(isInitial = false) {
-        const key = document.getElementById('sync-key').value.trim();
-        if (!key) return alert("同期キーを入れてね");
+    const SECRET_PASSWORD = "0829"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
+    
+    let railData = JSON.parse(localStorage.getItem('railData') || '[]');
+    let isAdmin = false;
 
-        currentSyncKey = key;
-        localStorage.setItem('last_sync_key', key);
-
-        database.ref('user_sync/' + key).on('value', function(snapshot) {
-            localData = snapshot.val() || { keio: [], jr: [], other: [] };
+    function unlockAdmin() {
+        if(document.getElementById('admin-pw').value === SECRET_PASSWORD) {
+            isAdmin = true;
+            document.getElementById('password-area').style.display = 'none';
+            document.getElementById('admin-controls').style.display = 'block';
             render();
-        });
-        
-        if (!isInitial) alert("合言葉「" + key + "」で同期しました");
+        } else { alert("パスワード違います"); }
     }
 
-    function saveItem() {
-        if (!currentSyncKey) return alert("先に「同期キー」を入力してね");
-        var t = document.getElementById('new-title').value.trim();
-        var u = document.getElementById('new-url').value.trim();
-        if(!t || !u) return alert("タイトルとURLを入力してね");
-
-        localData[currentTab].push({title: t, url: u});
-        database.ref('user_sync/' + currentSyncKey).set(localData).then(function() {
-            document.getElementById('new-title').value = '';
-            document.getElementById('new-url').value = '';
-            alert("クラウドに保存完了！");
-        });
+    function addItem() {
+        const title = document.getElementById('new-title').value;
+        const url = document.getElementById('new-url').value;
+        const cat = document.getElementById('new-cat').value;
+        const desc = document.getElementById('new-desc').value;
+        const secret = document.getElementById('new-secret').checked;
+        if(!title || !url) return alert("タイトルとURLを入力してください");
+        railData.push({title, url, cat, desc, secret});
+        saveLocal(); render();
+        document.getElementById('new-title').value = "";
+        document.getElementById('new-url').value = "";
+        document.getElementById('new-desc').value = "";
+        document.getElementById('new-secret').checked = false;
     }
 
     function render() {
-        ['keio', 'jr', 'other'].forEach(function(tab) {
-            var container = document.getElementById(tab);
-            container.innerHTML = '';
-            if (localData[tab]) {
-                localData[tab].forEach(function(item, index) {
-                    container.innerHTML += `
-                        <div class="link-item">
-                            <span style="font-weight:bold;">${item.title}</span>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <a href="${item.url}" target="_blank" class="open-btn">開く</a>
-                                ${isAdmin ? `<button onclick="deleteItem('${tab}',${index})" style="border:none; color:red; background:none; cursor:pointer; font-size:18px;">×</button>` : ''}
-                            </div>
-                        </div>`;
-                });
-            }
+        const ids = ['all', 'keio', 'jr', 'files', 'others'];
+        ids.forEach(id => {
+            const el = document.getElementById('list-' + id);
+            if(el) el.innerHTML = "";
         });
-    }
 
-    function deleteItem(tab, idx) {
-        if (!confirm("削除する？")) return;
-        localData[tab].splice(idx, 1);
-        database.ref('user_sync/' + currentSyncKey).set(localData);
-    }
-
-    function resetData() {
-        if (!confirm("この合言葉のデータを全部消す？")) return;
-        localData = { keio: [], jr: [], other: [] };
-        database.ref('user_sync/' + currentSyncKey).set(localData);
-    }
-
-    function changeTab(id) {
-        currentTab = id;
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('btn-' + id).classList.add('active');
-    }
-
-    function askPassword() {
-        if (isAdmin) { isAdmin = false; document.getElementById('edit-panel').style.display = 'none'; return; }
-        if (prompt("パスワード") === "0829") {
-            isAdmin = true;
-            document.getElementById('edit-panel').style.display = 'block';
-            render();
-        }
-    }
-
-    initApp();
-</script>
-</body>
-</html>
-](https://nogi2466-tech.github.io/tetsudo-site/)
+        railData.forEach((item, index) => {
+            if (item.secret && !isAdmin) return;
+            const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">[削除]</button>` : '';
+            const secretBadge = item.secret ? `<span class="secret-badge">非公開中</span>` : '';
+            const secretClass = item.secret ? 'is-secret' : '';
+            let catLabel = {keio:'京王', jr:'JR', files:'資料', others:'その他'}[item.cat] || '他';
+            const html = `<div class="url-item ${secretClass}"><div class="url-info"><div><span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>${secretBadge}<b><a href="${item.url}" target="_blank">${item.title}</a></b></div>${deleteBtn}</div>${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}</div>
