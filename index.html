@@ -74,7 +74,7 @@
         <button class="btn-main" style="background:#4caf50;" onclick="syncLoad()">クラウドから読込 (受信)</button>
         <hr>
         <div id="password-area">
-            <input type="password" id="admin-pw" placeholder="パスワード(0829)">
+            <input type="password" id="admin-pw" placeholder="パスワードを入力">
             <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
         </div>
         <div id="admin-controls">
