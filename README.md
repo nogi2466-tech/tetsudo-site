@@ -29,7 +29,6 @@
         .tag.FILES { background: var(--files-color); }
         .tag.OTHERS { background: var(--others-color); }
         
-        /* 管理者用の非公開スタイル */
         .is-secret { border-left: 5px solid #ff5722 !important; background-color: #fff9f8; }
         .secret-badge { font-size: 10px; background: #ff5722; color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
 
@@ -74,10 +73,12 @@
         <button class="btn-main" style="background:#4caf50;" onclick="syncLoad()">クラウドから読込 (受信)</button>
         <hr>
         <div id="password-area">
-            <input type="password" id="admin-pw" placeholder="パスワード(0829)">
+            <!-- 修正：プレースホルダーからパスワードを削除 -->
+            <input type="password" id="admin-pw" placeholder="管理者パスワードを入力">
             <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
         </div>
         <div id="admin-controls">
+            <p style="color:red; font-size:12px;">管理者モード：編集中</p>
             <select id="new-cat">
                 <option value="keio">京王</option>
                 <option value="jr">JR</option>
@@ -101,11 +102,20 @@
         navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered"));
     }
 
+    // パスワードの設定
     const SECRET_PASSWORD = "0829"; 
-    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
+    const API_URL = "https://google.com";
     
     let railData = JSON.parse(localStorage.getItem('railData') || '[]');
     let isAdmin = false;
+
+    // ページ切り替え機能
+    function showPage(pageId) {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById('nav-' + pageId).classList.add('active');
+    }
 
     function unlockAdmin() {
         if(document.getElementById('admin-pw').value === SECRET_PASSWORD) {
@@ -113,7 +123,7 @@
             document.getElementById('password-area').style.display = 'none';
             document.getElementById('admin-controls').style.display = 'block';
             render();
-        } else { alert("パスワード違います"); }
+        } else { alert("パスワードが違います"); }
     }
 
     function addItem() {
@@ -131,17 +141,97 @@
         document.getElementById('new-secret').checked = false;
     }
 
+    function deleteItem(index) {
+        if(confirm("この項目を削除しますか？")) {
+            railData.splice(index, 1);
+            saveLocal();
+            render();
+        }
+    }
+
+    function clearAll() {
+        if(confirm("すべてのデータを削除しますか？")) {
+            railData = [];
+            saveLocal();
+            render();
+        }
+    }
+
+    function saveLocal() {
+        localStorage.setItem('railData', JSON.stringify(railData));
+    }
+
     function render() {
         const ids = ['all', 'keio', 'jr', 'files', 'others'];
+        const containers = {};
         ids.forEach(id => {
-            const el = document.getElementById('list-' + id);
-            if(el) el.innerHTML = "";
+            containers[id] = document.getElementById('list-' + id);
+            if(containers[id]) containers[id].innerHTML = "";
         });
 
         railData.forEach((item, index) => {
             if (item.secret && !isAdmin) return;
-            const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">[削除]</button>` : '';
+
+            const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer; font-size:12px;">[削除]</button>` : '';
             const secretBadge = item.secret ? `<span class="secret-badge">非公開中</span>` : '';
             const secretClass = item.secret ? 'is-secret' : '';
             let catLabel = {keio:'京王', jr:'JR', files:'資料', others:'その他'}[item.cat] || '他';
-            const html = `<div class="url-item ${secretClass}"><div class="url-info"><div><span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>${secretBadge}<b><a href="${item.url}" target="_blank">${item.title}</a></b></div>${deleteBtn}</div>${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}</div>
+            
+            const html = `
+                <div class="url-item ${secretClass}">
+                    <div class="url-info">
+                        <div>
+                            <span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>
+                            ${secretBadge}
+                            <b><a href="${item.url}" target="_blank">${item.title}</a></b>
+                        </div>
+                        ${deleteBtn}
+                    </div>
+                    ${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}
+                </div>`;
+            
+            // すべてのリストに追加
+            if(containers['all']) containers['all'].insertAdjacentHTML('beforeend', html);
+            // カテゴリ別リストに追加
+            if(containers[item.cat]) containers[item.cat].insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    // クラウド同期（保存）
+    async function syncSave() {
+        const btn = document.getElementById('btn-save');
+        btn.innerText = "送信中...";
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({action: "save", data: railData})
+            });
+            alert("保存完了");
+        } catch(e) {
+            alert("エラー: " + e);
+        }
+        btn.innerText = "現在の状態を保存 (送信)";
+    }
+
+    // クラウド同期（読込）
+    async function syncLoad() {
+        if(!confirm("クラウドからデータを読み込みますか？（現在のデータは上書きされます）")) return;
+        try {
+            const response = await fetch(API_URL);
+            const remoteData = await response.json();
+            if(remoteData) {
+                railData = remoteData;
+                saveLocal();
+                render();
+                alert("読み込み完了");
+            }
+        } catch(e) {
+            alert("エラー: " + e);
+        }
+    }
+
+    // 初期描画
+    render();
+</script>
+</body>
+</html>
