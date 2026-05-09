@@ -1,179 +1,190 @@
-<!DOCTYPE html>
+[<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailStream - GAS Sync Edition</title>
     <style>
-        body { font-family: sans-serif; background-color: #0074be; margin: 0; display: flex; flex-direction: column; align-items: center; padding-bottom: 50px; }
-        header { width: 100%; text-align: center; color: white; padding: 20px 0; }
-        nav ul { list-style: none; display: inline-flex; background: white; padding: 5px; border-radius: 25px; gap: 5px; margin: 0; overflow-x: auto; max-width: 90vw; }
-        nav li { color: #333; padding: 8px 15px; cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 20px; white-space: nowrap; }
-        nav li.active { background-color: #0074be; color: white; }
-        main { width: 95%; max-width: 600px; margin-top: 20px; }
-        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; font-size: 18px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
-        .search-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 20px; font-size: 14px; box-sizing: border-box; outline: none; margin-bottom: 15px; }
-        .list-item { display: flex; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #eee; text-decoration: none; color: #333; }
-        .item-info { flex: 1; }
-        .item-title { font-weight: bold; display: block; font-size: 15px; }
-        .item-desc { font-size: 12px; color: #666; display: block; margin-top: 2px; }
-        .badge { color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 10px; min-width: 40px; text-align: center; margin-top: 2px; }
-        .badge.京王 { background: #dd004b; }
-        .badge.JR { background: #008000; }
-        .badge.資料 { background: #666; }
-        .badge.その他 { background: #999; }
-        .admin-section { display: none; flex-direction: column; gap: 10px; }
-        .admin-section.active { display: flex; }
-        input, select, textarea, button { padding: 12px; border-radius: 6px; border: 1px solid #ddd; width: 100%; box-sizing: border-box; }
-        .btn-blue { background: #0074be; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .btn-green { background: #4caf50; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .btn-delete { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; width: auto; font-size: 11px; margin-top: 5px; }
-        .form-box { border: 2px dashed #ccc; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        :root { --primary-blue: #0078d4; --bg-gray: #f9f9f9; --accent-green: #4caf50; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; }
+        header { background: linear-gradient(135deg, #0078d4, #00b0ff); color: white; padding: 25px 10px; }
+        nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: center; overflow-x: auto; }
+        nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 15px; cursor: pointer; border-radius: 20px; white-space: nowrap; }
+        nav button.active { background: var(--primary-blue); color: white; font-weight: bold; }
+        section { display: none; max-width: 500px; margin: 20px auto; padding: 20px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: left; }
+        section.active { display: block; }
+        .url-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .clock { background: #e1f5fe; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; background: #666; }
+        a { text-decoration: none; color: #333; }
+        a:hover { color: var(--primary-blue); }
     </style>
 </head>
 <body>
-
-<header>
-    <h1>tetsudo-site</h1>
+    <header><h1>RailStream</h1></header>
+    
     <nav>
-        <ul id="tabs">
-            <li class="active" data-tab="すべて">すべて</li>
-            <li data-tab="京王">京王</li>
-            <li data-tab="JR">JR</li>
-            <li data-tab="資料">資料</li>
-            <li data-tab="その他">その他</li>
-            <li data-tab="設定">設定</li>
-        </ul>
+        <button onclick="showPage('all')" id="nav-all" class="active">すべて</button>
+        <button onclick="showPage('keio')" id="nav-keio">京王</button>
+        <button onclick="showPage('jr')" id="nav-jr">JR</button>
+        <button onclick="showPage('others')" id="nav-others">その他</button>
+        <button onclick="showPage('settings')" id="nav-settings">同期・設定</button>
     </nav>
-</header>
 
-<main>
-    <div class="card">
-        <h2 id="view-title">すべてのリスト</h2>
-        <input type="text" id="search-query" class="search-input" placeholder="タイトルや詳細で検索...">
-        <div id="list-content"></div>
-        <div id="admin-view" class="admin-section">
-            <div id="login-box">
-                <input type="password" id="pass-input" placeholder="パスワード (0829)">
-                <button class="btn-blue" id="unlock-btn" style="margin-top:10px;">ロック解除</button>
-            </div>
-            <div id="admin-controls" style="display:none;">
-                <button class="btn-green" id="sync-btn" style="margin-bottom:10px;">クラウドから読込 (受信)</button>
-                <button class="btn-blue" id="save-btn">クラウドへ保存 (送信)</button>
-                <div class="form-box">
-                    <h3>新規項目追加</h3>
-                    <input type="text" id="new-name" placeholder="タイトル" style="margin-bottom:8px;">
-                    <textarea id="new-desc" placeholder="詳細説明" style="margin-bottom:8px;"></textarea>
-                    <input type="text" id="new-url" placeholder="URL (https://...)" style="margin-bottom:8px;">
-                    <select id="new-cat" style="margin-bottom:8px;">
-                        <option value="京王">京王</option>
-                        <option value="JR">JR</option>
-                        <option value="資料">資料</option>
-                        <option value="その他">その他</option>
-                    </select>
-                    <button class="btn-blue" id="add-btn">追加する</button>
-                </div>
-                <div id="manage-list" style="margin-top:15px;"></div>
-            </div>
+    <section id="all" class="active"><h2>すべての動画</h2><div id="list-all"></div></section>
+    <section id="keio"><h2>京王線</h2><div id="list-keio"></div></section>
+    <section id="jr"><h2>JR線</h2><div id="list-jr"></div></section>
+    <section id="others"><h2>その他</h2><div id="list-others"></div></section>
+
+    <section id="settings">
+        <h2>データ追加・同期</h2>
+        <div class="clock">
+            <div id="date">----/--/--</div>
+            <div id="time" style="font-size:24px; font-weight:bold;">00:00:00</div>
         </div>
-    </div>
-</main>
+        
+        <select id="new-cat">
+            <option value="keio">京王</option>
+            <option value="jr">JR</option>
+            <option value="others">その他</option>
+        </select>
+        <input type="text" id="new-title" placeholder="タイトルを入力">
+        <input type="text" id="new-url" placeholder="URLを貼り付け">
+        <button class="btn-main" onclick="addItem()">リストに追加</button>
+        
+        <hr style="margin:25px 0; border:none; border-top:1px solid #eee;">
+        
+        <button class="btn-main" onclick="syncSave()">クラウドに保存 (送信)</button>
+        <button class="btn-main" style="background:var(--accent-green);" onclick="syncLoad()">クラウドから読込 (受信)</button>
+        <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">全データ削除</button>
+    </section>
 
-<script type="module">
-    import { initializeApp } from "https://gstatic.com";
-    import { getFirestore, doc, setDoc, getDoc } from "https://gstatic.com";
+<script>
+    // ★発行された最新のGAS URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbzHeoOkOPRU-AnuYQ7H3DbF_7hP1Rr3MbbaGcRx1V2hylvSZ-WUn4iMNowjz-5vBcZJqg/exec";
+    
+    let railData = JSON.parse(localStorage.getItem('railData') || '[]');
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyAe_KxKH-06cxE0JOGCtCEnM2xqjMcr-Rc",
-        authDomain: "tetsudo.firebaseapp.com",
-        databaseURL: "https://tetsudo-default-rtdb.firebaseio.com",
-        projectId: "tetsudo",
-        storageBucket: "tetsudo.firebasestorage.app",
-        messagingSenderId: "91814902933",
-        appId: "1:91814902933:web:be06cc22e0d5cdb642ef9c",
-        measurementId: "G-TP0SLTH0ER"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const DOC_REF = doc(db, "data", "main_list");
-
-    let items = [];
-    let currentTab = 'すべて';
-    let isUnlocked = false;
-
-    const render = () => {
-        const query = document.getElementById('search-query').value.toLowerCase();
-        const listContent = document.getElementById('list-content');
-        const adminView = document.getElementById('admin-view');
-        const manageList = document.getElementById('manage-list');
-        const searchInput = document.getElementById('search-query');
-        const title = document.getElementById('view-title');
-
-        listContent.innerHTML = ''; manageList.innerHTML = '';
-        title.innerText = currentTab === '設定' ? '同期と管理' : currentTab + 'のリスト';
-
-        if (currentTab === '設定') {
-            adminView.classList.add('active'); searchInput.style.display = 'none';
-            if (isUnlocked) {
-                items.forEach((item, index) => {
-                    const div = document.createElement('div');
-                    div.style.padding = "10px 0"; div.style.borderBottom = "1px solid #eee";
-                    div.innerHTML = `<strong>[${item.cat}] ${item.name}</strong><br><button class="btn-delete">削除</button>`;
-                    div.querySelector('.btn-delete').onclick = () => { items.splice(index, 1); render(); };
-                    manageList.appendChild(div);
-                });
-            }
-        } else {
-            adminView.classList.remove('active'); searchInput.style.display = 'block';
-            const filtered = items.filter(i => {
-                const matchTab = (currentTab === 'すべて' || i.cat === currentTab);
-                const matchSearch = i.name.toLowerCase().includes(query) || (i.desc && i.desc.toLowerCase().includes(query));
-                return matchTab && matchSearch;
-            });
-            filtered.forEach(item => {
-                const a = document.createElement('a'); a.className = 'list-item'; a.href = item.url; a.target = "_blank";
-                a.innerHTML = `<span class="badge ${item.cat}">${item.cat}</span><div class="item-info"><span class="item-title">${item.name}</span><span class="item-desc">${item.desc || ''}</span></div>`;
-                listContent.appendChild(a);
-            });
-        }
-    };
-
-    document.querySelectorAll('#tabs li').forEach(li => {
-        li.onclick = () => {
-            document.querySelectorAll('#tabs li').forEach(t => t.classList.remove('active'));
-            li.classList.add('active'); currentTab = li.getAttribute('data-tab');
-            document.getElementById('search-query').value = ''; render();
-        };
-    });
-
-    document.getElementById('search-query').oninput = render;
-    document.getElementById('unlock-btn').onclick = () => {
-        if(document.getElementById('pass-input').value === '0829') {
-            isUnlocked = true; document.getElementById('login-box').style.display = 'none';
-            document.getElementById('admin-controls').style.display = 'block'; render();
-        } else { alert('パスワードが違います'); }
-    };
-
-    document.getElementById('add-btn').onclick = () => {
-        const name = document.getElementById('new-name').value;
-        const desc = document.getElementById('new-desc').value;
+    function addItem() {
+        const title = document.getElementById('new-title').value;
         const url = document.getElementById('new-url').value;
         const cat = document.getElementById('new-cat').value;
-        if(name && url) {
-            items.push({ name, desc, url, cat }); render();
-            document.getElementById('new-name').value = ''; document.getElementById('new-desc').value = ''; document.getElementById('new-url').value = '';
+        if(!title || !url) return alert("タイトルとURLを入力してください");
+
+        railData.push({title, url, cat});
+        saveLocal();
+        render();
+        
+        document.getElementById('new-title').value = "";
+        document.getElementById('new-url').value = "";
+        alert("追加しました。保存ボタンでクラウドに同期してください。");
+    }
+
+    function render() {
+        const ids = ['all', 'keio', 'jr', 'others'];
+        ids.forEach(id => document.getElementById('list-' + id).innerHTML = "");
+
+        railData.forEach((item, index) => {
+            const html = `
+                <div class="url-item">
+                    <div>
+                        <span class="tag">${item.cat.toUpperCase()}</span>
+                        <b><a href="${item.url}" target="_blank">${item.title}</a></b>
+                    </div>
+                    <button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">削除</button>
+                </div>`;
+            document.getElementById('list-all').innerHTML += html;
+            if(document.getElementById('list-' + item.cat)) {
+                document.getElementById('list-' + item.cat).innerHTML += html;
+            }
+        });
+    }
+
+    function deleteItem(index) {
+        if(!confirm("削除しますか？")) return;
+        railData.splice(index, 1);
+        saveLocal();
+        render();
+    }
+
+    function saveLocal() {
+        localStorage.setItem('railData', JSON.stringify(railData));
+    }
+
+    // --- 同期機能 ---
+    async function syncSave() {
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = "送信中...";
+        btn.disabled = true;
+
+        try {
+            // GASへデータを送信
+            await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "save", data: railData })
+            });
+            alert("クラウドに保存しました！");
+        } catch (e) {
+            console.error(e);
+            alert("保存に失敗しました。GASの設定（全員への公開）を確認してください。");
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
         }
-    };
+    }
 
-    document.getElementById('save-btn').onclick = async () => {
-        try { await setDoc(DOC_REF, { list: items }); alert("クラウドに保存しました！"); } catch (e) { alert("保存失敗: " + e); }
-    };
+    async function syncLoad() {
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = "受信中...";
+        btn.disabled = true;
 
-    document.getElementById('sync-btn').onclick = async () => {
-        try { const snap = await getDoc(DOC_REF); if (snap.exists()) { items = snap.data().list || []; render(); alert("読み込みました"); } } catch (e) { alert("同期失敗: " + e); }
-    };
+        try {
+            const res = await fetch(API_URL);
+            const json = await res.json();
+            if (json && Array.isArray(json.data)) {
+                railData = json.data;
+                saveLocal();
+                render();
+                alert("最新データを読み込みました！");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("読込に失敗しました。");
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
 
-    window.onload = async () => { try { const snap = await getDoc(DOC_REF); if (snap.exists()) { items = snap.data().list || []; render(); } } catch (e) { render(); } };
+    function clearAll() {
+        if(confirm("全データを削除しますか？")) {
+            railData = [];
+            saveLocal();
+            render();
+        }
+    }
+
+    function showPage(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('nav-' + id).classList.add('active');
+    }
+
+    function init() {
+        render();
+        setInterval(() => {
+            const n = new Date();
+            document.getElementById('date').innerText = n.toLocaleDateString();
+            document.getElementById('time').innerText = n.toLocaleTimeString();
+        }, 1000);
+    }
+    window.onload = init;
 </script>
 </body>
 </html>
+](https://script.google.com/macros/s/AKfycbzHeoOkOPRU-AnuYQ7H3DbF_7hP1Rr3MbbaGcRx1V2hylvSZ-WUn4iMNowjz-5vBcZJqg/exec)
