@@ -87,7 +87,7 @@
 <script type="module">
     // --- Firebase設定 ---
     import { initializeApp } from "https://gstatic.com";
-    import { getFirestore, doc, setDoc, getDoc } from "https://gstatic.com";
+    import { getFirestore, doc, setDoc, getDoc } from "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
 
     const firebaseConfig = {
         apiKey: "ここにあなたのAPI_KEYを入力",
