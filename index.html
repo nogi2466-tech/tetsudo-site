@@ -112,7 +112,7 @@
 
 <script>
     const SECRET_PASSWORD = "0829"; 
-    const API_URL = "https://google.com";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
     
     let railData = JSON.parse(localStorage.getItem('railData') || '[]');
     let isAdmin = false;
