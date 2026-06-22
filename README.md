@@ -1,147 +1,166 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <link rel="manifest" href="manifest.json">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0078d4">
-    <title>tetsudo-site</title>
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://icons8.com">
-    <link rel="icon" href="https://icons8.com">
+<meta charset="UTF-8">
+<title>tetsudo-site6</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <style>
-        :root { 
-            --primary-blue: #0078d4; 
-            --bg-gray: #f9f9f9; 
-            --keio-color: #e60012; 
-            --jr-color: #008000; 
-            --files-color: #607d8b; 
-            --others-color: #ff8c00; 
-        }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg-gray); text-align: center; -webkit-user-select: none; user-select: none; }
-        header { background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 25px 10px; }
-        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; color: white; }
-        .tag.KEIO { background: var(--keio-color); }
-        .tag.JR { background: var(--jr-color); }
-        .tag.FILES { background: var(--files-color); }
-        .tag.OTHERS { background: var(--others-color); }
-        
-        /* 管理者用の非公開スタイル */
-        .is-secret { border-left: 5px solid #ff5722 !important; background-color: #fff9f8; }
-        .secret-badge { font-size: 10px; background: #ff5722; color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
+<style>
+body {
+  font-family: sans-serif;
+  background: #f5f5f5;
+  margin: 0;
+  padding: 0;
+}
 
-        nav { background: white; padding: 10px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: center; overflow-x: auto; }
-        nav button { background: none; border: none; font-size: 14px; margin: 0 4px; padding: 8px 15px; cursor: pointer; border-radius: 20px; white-space: nowrap; }
-        nav button.active { background: var(--primary-blue); color: white; font-weight: bold; }
-        
-        section { display: none; max-width: 500px; margin: 20px auto; padding: 20px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: left; }
-        section.active { display: block; }
-        
-        .url-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
-        .url-info { display: flex; justify-content: space-between; align-items: flex-start; }
-        .url-info b { -webkit-user-select: text; user-select: text; }
-        .url-desc { font-size: 12px; color: #666; margin-top: 4px; padding-left: 8px; border-left: 3px solid #eee; }
-        
-        #admin-controls { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #ddd; }
-        .btn-main { background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        a { text-decoration: none; color: #333; }
-        a:hover { color: var(--primary-blue); }
-    </style>
+header {
+  background: #ff9800;
+  padding: 10px;
+  color: white;
+  font-size: 20px;
+  text-align: center;
+}
+
+#tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 10px;
+  background: #fff;
+}
+
+.tab {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #ddd;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tab.active {
+  background: #ff9800;
+  color: white;
+}
+
+#searchArea {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+#searchInput {
+  flex: 1;
+  padding: 8px;
+  font-size: 14px;
+}
+
+#sortSelect {
+  padding: 8px;
+  font-size: 14px;
+}
+
+#listArea {
+  padding: 10px;
+}
+
+.card {
+  background: white;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border-left: 6px solid #ff9800;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.card-detail {
+  margin-top: 4px;
+  color: #333;
+  font-size: 14px;
+}
+
+#editArea {
+  padding: 10px;
+  background: #fff;
+}
+
+label {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+button {
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-size: 14px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+</style>
 </head>
+
 <body>
-    <header><h1>tetsudo-site</h1></header>
-    <nav>
-        <button onclick="showPage('all')" id="nav-all" class="active">すべて</button>
-        <button onclick="showPage('keio')" id="nav-keio">京王</button>
-        <button onclick="showPage('jr')" id="nav-jr">JR線</button>
-        <button onclick="showPage('files')" id="nav-files">資料</button>
-        <button onclick="showPage('others')" id="nav-others">その他</button>
-        <button onclick="showPage('settings')" id="nav-settings">同期・管理</button>
-    </nav>
 
-    <section id="all" class="active"><h2>すべてのリスト</h2><div id="list-all"></div></section>
-    <section id="keio"><h2>京王線</h2><div id="list-keio"></div></section>
-    <section id="jr"><h2>JR線</h2><div id="list-jr"></div></section>
-    <section id="files"><h2>資料</h2><div id="list-files"></div></section>
-    <section id="others"><h2>その他</h2><div id="list-others"></div></section>
+<header>tetsudo-site6</header>
 
-    <section id="settings">
-        <h2>同期と管理</h2>
-        <button class="btn-main" style="background:#4caf50;" onclick="syncLoad()">クラウドから読込 (受信)</button>
-        <hr>
-        <div id="password-area">
-            <input type="password" id="admin-pw" placeholder="パスワード(0829)">
-            <button class="btn-main" onclick="unlockAdmin()">ロック解除</button>
-        </div>
-        <div id="admin-controls">
-            <select id="new-cat">
-                <option value="keio">京王</option>
-                <option value="jr">JR</option>
-                <option value="files">資料</option>
-                <option value="others">その他</option>
-            </select>
-            <input type="text" id="new-title" placeholder="タイトル">
-            <input type="text" id="new-url" placeholder="URL">
-            <textarea id="new-desc" placeholder="説明" rows="2"></textarea>
-            <label style="font-size:14px; display:block; margin: 10px 0; text-align: left;">
-                <input type="checkbox" id="new-secret" style="width:auto; vertical-align: middle;"> 管理者のみ表示する (非公開設定)
-            </label>
-            <button class="btn-main" onclick="addItem()">リストに追加</button>
-            <button class="btn-main" id="btn-save" onclick="syncSave()">現在の状態を保存 (送信)</button>
-            <button class="btn-main" style="background:#999; margin-top:20px;" onclick="clearAll()">全削除</button>
-        </div>
-    </section>
+<div id="tabs">
+  <div class="tab active" data-cat="すべて">すべて</div>
+  <div class="tab" data-cat="京王">京王</div>
+  <div class="tab" data-cat="JR">JR</div>
+  <div class="tab" data-cat="大手私鉄">大手私鉄</div>
+  <div class="tab" data-cat="その他">その他</div>
+  <div class="tab" data-cat="資料">資料</div>
+  <div class="tab" data-cat="画像">画像</div>
+  <div class="tab" data-cat="同期・管理">同期・管理</div>
+</div>
 
-<script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered"));
-    }
+<div id="searchArea">
+  <input id="searchInput" type="text" placeholder="タイトルで検索…">
+  <select id="sortSelect">
+    <option value="az">五十音順</option>
+    <option value="za">逆五十音順</option>
+    <option value="new">新しい順</option>
+    <option value="old">古い順</option>
+    <option value="type">種別順</option>
+  </select>
+</div>
 
-    const SECRET_PASSWORD = "0829"; 
-    const API_URL = "https://script.google.com/macros/s/AKfycbwrCAWMH7NvrVcAErytIutPyt-AM4v5vvDtM_wD3aCZhwY6iNslqzhKI4qccqNoYjle/exec";
-    
-    let railData = JSON.parse(localStorage.getItem('railData') || '[]');
-    let isAdmin = false;
+<div id="editArea" class="hidden">
+  <label>タイトル</label>
+  <input id="newTitle">
 
-    function unlockAdmin() {
-        if(document.getElementById('admin-pw').value === SECRET_PASSWORD) {
-            isAdmin = true;
-            document.getElementById('password-area').style.display = 'none';
-            document.getElementById('admin-controls').style.display = 'block';
-            render();
-        } else { alert("パスワード違います"); }
-    }
+  <label>種別（任意）</label>
+  <input id="newType">
 
-    function addItem() {
-        const title = document.getElementById('new-title').value;
-        const url = document.getElementById('new-url').value;
-        const cat = document.getElementById('new-cat').value;
-        const desc = document.getElementById('new-desc').value;
-        const secret = document.getElementById('new-secret').checked;
-        if(!title || !url) return alert("タイトルとURLを入力してください");
-        railData.push({title, url, cat, desc, secret});
-        saveLocal(); render();
-        document.getElementById('new-title').value = "";
-        document.getElementById('new-url').value = "";
-        document.getElementById('new-desc').value = "";
-        document.getElementById('new-secret').checked = false;
-    }
+  <label>行き先（任意）</label>
+  <input id="newDest">
 
-    function render() {
-        const ids = ['all', 'keio', 'jr', 'files', 'others'];
-        ids.forEach(id => {
-            const el = document.getElementById('list-' + id);
-            if(el) el.innerHTML = "";
-        });
+  <label>URL</label>
+  <input id="newURL">
 
-        railData.forEach((item, index) => {
-            if (item.secret && !isAdmin) return;
-            const deleteBtn = isAdmin ? `<button onclick="deleteItem(${index})" style="color:red; border:none; background:none; cursor:pointer;">[削除]</button>` : '';
-            const secretBadge = item.secret ? `<span class="secret-badge">非公開中</span>` : '';
-            const secretClass = item.secret ? 'is-secret' : '';
-            let catLabel = {keio:'京王', jr:'JR', files:'資料', others:'その他'}[item.cat] || '他';
-            const html = `<div class="url-item ${secretClass}"><div class="url-info"><div><span class="tag ${item.cat.toUpperCase()}">${catLabel}</span>${secretBadge}<b><a href="${item.url}" target="_blank">${item.title}</a></b></div>${deleteBtn}</div>${item.desc ? `<div class="url-desc">${item.desc}</div>` : ''}</div>
+  <label>詳細</label>
+  <textarea id="newDetail"></textarea>
+
+  <label>カテゴリ</label>
+  <input id="newCategory">
+
+  <button id="addSubmit">保存</button>
+</div>
+
+<div id="listArea"></div>
+
