@@ -164,3 +164,242 @@ button {
 
 <div id="listArea"></div>
 
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_DOMAIN",
+  databaseURL: "YOUR_DB_URL",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_BUCKET",
+  messagingSenderId: "YOUR_SENDER",
+  appId: "YOUR_APPID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let items = [];
+let currentTab = "すべて";
+let sortMode = "az"; // 初期値：五十音順
+let editIndex = null;
+
+/* -------------------------
+   カテゴリ自動修正
+------------------------- */
+function normalizeCategory(cat) {
+  if (!cat) return "その他";
+  cat = cat.trim();
+  cat = cat.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s =>
+    String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
+  );
+
+  const map = {
+    "京王": "京王",
+    "JR": "JR",
+    "大手私鉄": "大手私鉄",
+    "その他": "その他",
+    "資料": "資料",
+    "画像": "画像",
+    "同期・管理": "同期・管理"
+  };
+
+  return map[cat] || "その他";
+}
+
+/* -------------------------
+   Firebase 読み込み
+------------------------- */
+function loadFromFirebase() {
+  const dataRef = ref(db, "urlData");
+  onValue(dataRef, (snapshot) => {
+    const val = snapshot.val();
+    items = val ? val : [];
+
+    // カテゴリ自動修正
+    items = items.map(item => ({
+      ...item,
+      category: normalizeCategory(item.category)
+    }));
+
+    render();
+  });
+}
+loadFromFirebase();
+
+/* -------------------------
+   Firebase 保存
+------------------------- */
+function saveToFirebase() {
+  set(ref(db, "urlData"), items);
+}
+
+/* -------------------------
+   並び替えロジック
+------------------------- */
+function applySort(list) {
+  if (sortMode === "new") {
+    list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+  if (sortMode === "old") {
+    list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  }
+  if (sortMode === "az") {
+    list.sort((a, b) =>
+      (a.title || "").localeCompare(b.title || "", "ja", { sensitivity: "base" })
+    );
+  }
+  if (sortMode === "za") {
+    list.sort((a, b) =>
+      (b.title || "").localeCompare(a.title || "", "ja", { sensitivity: "base" })
+    );
+  }
+  if (sortMode === "type") {
+    list.sort((a, b) =>
+      (a.type || "").localeCompare(b.type || "", "ja", { sensitivity: "base" })
+    );
+  }
+}
+/* -------------------------
+   カード描画
+------------------------- */
+function render() {
+  const listArea = document.getElementById("listArea");
+  listArea.innerHTML = "";
+
+  let filtered = items.filter(item => {
+    if (currentTab !== "すべて" && item.category !== currentTab) return false;
+    const word = searchInput.value.trim();
+    if (word && !item.title.includes(word)) return false;
+    return true;
+  });
+
+  applySort(filtered);
+
+  filtered.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const title = document.createElement("div");
+    title.className = "card-title";
+    title.textContent = item.title;
+    card.appendChild(title);
+
+    const detail = document.createElement("div");
+    detail.className = "card-detail";
+
+    const type = item.type || "";
+    const dest = item.destination || "";
+    const det = item.detail || "";
+
+    detail.textContent = `${type}${dest}　${det}`;
+    card.appendChild(detail);
+
+    card.addEventListener("click", () => {
+      editIndex = items.indexOf(item);
+      openEdit(item);
+    });
+
+    listArea.appendChild(card);
+  });
+}
+
+/* -------------------------
+   編集画面を開く
+------------------------- */
+function openEdit(item) {
+  document.getElementById("newTitle").value = item.title;
+  document.getElementById("newType").value = item.type || "";
+  document.getElementById("newDest").value = item.destination || "";
+  document.getElementById("newURL").value = item.url;
+  document.getElementById("newDetail").value = item.detail;
+  document.getElementById("newCategory").value = item.category;
+
+  document.getElementById("editArea").classList.remove("hidden");
+  document.getElementById("searchArea").classList.add("hidden");
+  document.getElementById("listArea").classList.add("hidden");
+}
+
+/* -------------------------
+   新規追加・編集保存
+------------------------- */
+document.getElementById("addSubmit").addEventListener("click", () => {
+  const title = newTitle.value.trim();
+  const type = newType.value.trim();
+  const destination = newDest.value.trim();
+  const url = newURL.value.trim();
+  const detail = newDetail.value.trim();
+  const category = normalizeCategory(newCategory.value.trim());
+
+  if (!title || !url) {
+    alert("タイトルとURLは必須です");
+    return;
+  }
+
+  if (editIndex !== null) {
+    items[editIndex] = {
+      ...items[editIndex],
+      title, type, destination, url, detail, category
+    };
+  } else {
+    items.push({
+      title, type, destination, url, detail, category,
+      createdAt: Date.now()
+    });
+  }
+
+  saveToFirebase();
+  closeEdit();
+});
+
+/* -------------------------
+   編集画面を閉じる
+------------------------- */
+function closeEdit() {
+  editIndex = null;
+  newTitle.value = "";
+  newType.value = "";
+  newDest.value = "";
+  newURL.value = "";
+  newDetail.value = "";
+  newCategory.value = "";
+
+  document.getElementById("editArea").classList.add("hidden");
+  document.getElementById("searchArea").classList.remove("hidden");
+  document.getElementById("listArea").classList.remove("hidden");
+
+  render();
+}
+
+/* -------------------------
+   タブ切り替え
+------------------------- */
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+
+    currentTab = tab.dataset.cat;
+    render();
+  });
+});
+
+/* -------------------------
+   検索
+------------------------- */
+const searchInput = document.getElementById("searchInput");
+searchInput.addEventListener("input", () => render());
+
+/* -------------------------
+   並び替えプルダウン
+------------------------- */
+document.getElementById("sortSelect").addEventListener("change", (e) => {
+  sortMode = e.target.value;
+  render();
+});
+</script>
+
+</body>
+</html>
