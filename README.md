@@ -54,7 +54,6 @@
       white-space: nowrap;
     }
 
-    /* タブのカテゴリ色 */
     .tab[data-tab="京王"] { background: #b4007f; }
     .tab[data-tab="JR"] { background: #4caf50; }
     .tab[data-tab="大手私鉄"] { background: #ffd54f; color:#333; }
@@ -97,7 +96,6 @@
       gap: 10px;
     }
 
-    /* カードデザイン（改良版） */
     .card {
       background: #fff;
       border-radius: 12px;
@@ -133,7 +131,6 @@
       color: #444;
     }
 
-    /* カテゴリ色（カード左線 & カテゴリ名） */
     .cat-京王 { border-left-color: #b4007f; }
     .cat-京王 .card-category { color: #b4007f; }
 
@@ -232,6 +229,7 @@
 <div class="search-bar">
   <input type="text" id="searchInput" placeholder="タイトルで検索…">
 </div>
+
 <main>
   <!-- 一覧画面 -->
   <div id="listSection">
@@ -286,9 +284,7 @@
     </div>
   </div>
 </main>
-
-</div>
-<script type="module">
+  <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -396,7 +392,23 @@
         if (!searchText) return true;
         return (item.title || "").toLowerCase().includes(searchText.toLowerCase());
       })
-      .sort((a, b) => (a.title || "").localeCompare(b.title || "", "ja"));
+      .sort((a, b) => {
+        const t = (a.title || "").localeCompare(b.title || "", "ja", {
+          sensitivity: "base",
+          numeric: true,
+          ignorePunctuation: true
+        });
+        if (t !== 0) return t;
+
+        const d = (a.detail || "").localeCompare(b.detail || "", "ja", {
+          sensitivity: "base",
+          numeric: true,
+          ignorePunctuation: true
+        });
+        if (d !== 0) return d;
+
+        return (a.createdAt || 0) - (b.createdAt || 0);
+      });
 
     cardList.innerHTML = "";
     filtered.forEach((item) => {
@@ -453,6 +465,7 @@
 
       cardList.appendChild(card);
     });
+  }
   }
 
   function startEdit(item, index) {
@@ -536,9 +549,21 @@
     }
 
     if (editIndex !== null) {
-      items[editIndex] = { title, url, detail, category };
+      items[editIndex] = {
+        ...items[editIndex],
+        title,
+        url,
+        detail,
+        category
+      };
     } else {
-      items.push({ title, url, detail, category });
+      items.push({
+        title,
+        url,
+        detail,
+        category,
+        createdAt: Date.now()
+      });
     }
 
     saveToFirebase();
@@ -575,5 +600,4 @@
 
 </body>
 </html>
-
 
