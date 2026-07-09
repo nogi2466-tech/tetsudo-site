@@ -1,405 +1,579 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>tetsudo-site6</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>tetsudo-site6</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<style>
-body {
-  font-family: sans-serif;
-  background: #f5f5f5;
-  margin: 0;
-  padding: 0;
-}
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+    }
 
-header {
-  background: #ff9800;
-  padding: 10px;
-  color: white;
-  font-size: 20px;
-  text-align: center;
-}
+    .container {
+      width: 100%;
+      max-width: 100%;
+      min-height: 100vh;
+      background: #fff;
+    }
 
-#tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 10px;
-  background: #fff;
-}
+    header {
+      background: #1976d2;
+      color: #fff;
+      padding: 12px 16px;
+    }
 
-.tab {
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: #ddd;
-  cursor: pointer;
-  font-size: 14px;
-}
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      text-align: center;
+    }
 
-.tab.active {
-  background: #ff9800;
-  color: white;
-}
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+    }
 
-#searchArea {
-  display: flex;
-  gap: 8px;
-  padding: 10px;
-  background: #fff;
-}
+    .tab {
+      padding: 8px 14px;
+      border-radius: 18px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #fff;
+      border: 1px solid #fff4;
+      transition: 0.2s;
+      white-space: nowrap;
+    }
 
-#searchInput {
-  flex: 1;
-  padding: 8px;
-  font-size: 14px;
-}
+    /* タブのカテゴリ色 */
+    .tab[data-tab="京王"] { background: #b4007f; }
+    .tab[data-tab="JR"] { background: #4caf50; }
+    .tab[data-tab="大手私鉄"] { background: #ffd54f; color:#333; }
+    .tab[data-tab="その他"] { background: #9e9e9e; }
+    .tab[data-tab="資料"] { background: #ba68c8; }
+    .tab[data-tab="画像"] { background: #42a5f5; }
 
-#sortSelect {
-  padding: 8px;
-  font-size: 14px;
-}
+    .tab.active {
+      background: #fff;
+      color: #1976d2;
+      font-weight: 600;
+    }
 
-#listArea {
-  padding: 10px;
-}
+    .search-bar {
+      padding: 10px 16px;
+      background: #e3f2fd;
+    }
 
-.card {
-  background: white;
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  border-left: 6px solid #ff9800;
-}
+    .search-bar input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #bbb;
+      font-size: 15px;
+    }
 
-.card-title {
-  font-size: 16px;
-  font-weight: bold;
-}
+    main {
+      padding: 12px 16px 24px;
+    }
 
-.card-detail {
-  margin-top: 4px;
-  color: #333;
-  font-size: 14px;
-}
+    .section-title {
+      font-size: 18px;
+      margin: 10px 0 16px;
+      text-align: center;
+    }
 
-#editArea {
-  padding: 10px;
-  background: #fff;
-}
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
-label {
-  display: block;
-  margin-top: 10px;
-  font-size: 14px;
-}
+    /* カードデザイン（改良版） */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      border-left: 6px solid #ccc;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      transition: 0.2s;
+      cursor: pointer;
+    }
 
-input, textarea, select {
-  width: 100%;
-  padding: 8px;
-  margin-top: 4px;
-  font-size: 14px;
-}
+    .card:hover {
+      background: #f7faff;
+      transform: translateY(-2px);
+    }
 
-button {
-  padding: 10px 14px;
-  margin-top: 10px;
-  font-size: 14px;
-  background: #ff9800;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-</style>
+    .card-category {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      opacity: 0.9;
+    }
+
+    .card-title {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .card-detail {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #444;
+    }
+
+    /* カテゴリ色（カード左線 & カテゴリ名） */
+    .cat-京王 { border-left-color: #b4007f; }
+    .cat-京王 .card-category { color: #b4007f; }
+
+    .cat-JR { border-left-color: #4caf50; }
+    .cat-JR .card-category { color: #4caf50; }
+
+    .cat-大手私鉄 { border-left-color: #ffd54f; }
+    .cat-大手私鉄 .card-category { color: #d4a600; }
+
+    .cat-その他 { border-left-color: #9e9e9e; }
+    .cat-その他 .card-category { color: #9e9e9e; }
+
+    .cat-資料 { border-left-color: #ba68c8; }
+    .cat-資料 .card-category { color: #ba68c8; }
+
+    .cat-画像 { border-left-color: #42a5f5; }
+    .cat-画像 .card-category { color: #42a5f5; }
+
+    .edit-buttons {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .edit-btn, .delete-btn {
+      padding: 6px 10px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .edit-btn { background: #1976d2; }
+    .delete-btn { background: #d32f2f; }
+
+    .settings {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .settings label {
+      font-size: 14px;
+      display: block;
+      margin: 10px 0 4px;
+    }
+
+    .settings input,
+    .settings select,
+    .settings textarea {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #bbb;
+    }
+
+    .settings textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    .settings button {
+      margin-top: 10px;
+      padding: 10px 14px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .hidden { display: none; }
+  </style>
 </head>
 
 <body>
+<div class="container">
 
-<header>tetsudo-site6</header>
+<header>
+  <h1>tetsudo-site6</h1>
 
-<div id="tabs">
-  <div class="tab active" data-cat="すべて">すべて</div>
-  <div class="tab" data-cat="京王">京王</div>
-  <div class="tab" data-cat="JR">JR</div>
-  <div class="tab" data-cat="大手私鉄">大手私鉄</div>
-  <div class="tab" data-cat="その他">その他</div>
-  <div class="tab" data-cat="資料">資料</div>
-  <div class="tab" data-cat="画像">画像</div>
-  <div class="tab" data-cat="同期・管理">同期・管理</div>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="すべて">すべて</div>
+    <div class="tab" data-tab="京王">京王</div>
+    <div class="tab" data-tab="JR">JR</div>
+    <div class="tab" data-tab="大手私鉄">大手私鉄</div>
+    <div class="tab" data-tab="その他">その他</div>
+    <div class="tab" data-tab="資料">資料</div>
+    <div class="tab" data-tab="画像">画像</div>
+    <div class="tab" data-tab="同期・管理">同期・管理</div>
+  </div>
+</header>
+
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="タイトルで検索…">
 </div>
+<main>
+  <!-- 一覧画面 -->
+  <div id="listSection">
+    <div class="section-title" id="sectionTitle">すべて</div>
+    <div class="card-list" id="cardList"></div>
+  </div>
 
-<div id="searchArea">
-  <input id="searchInput" type="text" placeholder="タイトルで検索…">
-  <select id="sortSelect">
-    <option value="az">五十音順</option>
-    <option value="za">逆五十音順</option>
-    <option value="new">新しい順</option>
-    <option value="old">古い順</option>
-    <option value="type">種別順</option>
-  </select>
+  <!-- 追加 / 編集画面 -->
+  <div id="settingsSection" class="hidden">
+    <div class="section-title">同期・管理</div>
+
+    <div class="settings" id="passwordBlock">
+      <label>編集パスワード</label>
+      <input type="password" id="adminPass" placeholder="パスワードを入力">
+      <button id="passSubmit" style="background:#555;color:#fff;">送信</button>
+      <div class="hint">正しいパスワードを入力すると追加・編集・削除が有効になります。</div>
+    </div>
+
+    <div class="settings hidden" id="formBlock">
+      <div class="back-row">
+        <button class="back-btn" id="backToList">◀ 戻る</button>
+        <span id="formModeLabel" style="font-size:14px;color:#333;"></span>
+      </div>
+
+      <div class="section-title" id="formTitle">新規URL追加</div>
+
+      <label>タイトル</label>
+      <input type="text" id="newTitle">
+
+      <label>URL</label>
+      <input type="text" id="newURL">
+
+      <label>詳細</label>
+      <textarea id="newDetail"></textarea>
+
+      <label>カテゴリ</label>
+      <select id="newCategory">
+        <option value="京王">京王</option>
+        <option value="JR">JR</option>
+        <option value="大手私鉄">大手私鉄</option>
+        <option value="その他">その他</option>
+        <option value="資料">資料</option>
+        <option value="画像">画像</option>
+      </select>
+
+      <button id="addSubmit" style="background:#1976d2;color:#fff;">追加</button>
+
+      <hr style="margin:16px 0;">
+
+      <button id="cloudLoad">クラウド受信</button>
+      <button id="cloudSave">クラウド保存</button>
+    </div>
+  </div>
+</main>
+
 </div>
-
-<div id="editArea" class="hidden">
-  <label>タイトル</label>
-  <input id="newTitle">
-
-  <label>種別（任意）</label>
-  <input id="newType">
-
-  <label>行き先（任意）</label>
-  <input id="newDest">
-
-  <label>URL</label>
-  <input id="newURL">
-
-  <label>詳細</label>
-  <textarea id="newDetail"></textarea>
-
-  <label>カテゴリ</label>
-  <input id="newCategory">
-
-  <button id="addSubmit">保存</button>
-</div>
-
-<div id="listArea"></div>
-
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_DOMAIN",
-  databaseURL: "YOUR_DB_URL",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_BUCKET",
-  messagingSenderId: "YOUR_SENDER",
-  appId: "YOUR_APPID"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-let items = [];
-let currentTab = "すべて";
-let sortMode = "az"; // 初期値：五十音順
-let editIndex = null;
-
-/* -------------------------
-   カテゴリ自動修正
-------------------------- */
-function normalizeCategory(cat) {
-  if (!cat) return "その他";
-  cat = cat.trim();
-  cat = cat.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s =>
-    String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
-  );
-
-  const map = {
-    "京王": "京王",
-    "JR": "JR",
-    "大手私鉄": "大手私鉄",
-    "その他": "その他",
-    "資料": "資料",
-    "画像": "画像",
-    "同期・管理": "同期・管理"
+  const firebaseConfig = {
+    apiKey: "AIzaSyD55Pawag1UichGwM-Uxddivb8lFr7QOU8",
+    authDomain: "tetsudo-site6.firebaseapp.com",
+    databaseURL: "https://tetsudo-site6-default-rtdb.firebaseio.com",
+    projectId: "tetsudo-site6",
+    storageBucket: "tetsudo-site6.firebasestorage.app",
+    messagingSenderId: "563943849207",
+    appId: "1:563943849207:web:1c813365201cb431d6e7f2"
   };
 
-  return map[cat] || "その他";
-}
+  const PASSWORD = "0829";
 
-/* -------------------------
-   Firebase 読み込み
-------------------------- */
-function loadFromFirebase() {
-  const dataRef = ref(db, "urlData");
-  onValue(dataRef, (snapshot) => {
-    const val = snapshot.val();
-    items = val ? val : [];
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase();
+  const auth = getAuth();
 
-    // カテゴリ自動修正
-    items = items.map(item => ({
-      ...item,
-      category: normalizeCategory(item.category)
-    }));
+  let items = [];
+  let currentTab = "すべて";
+  let searchText = "";
+  let adminMode = false;
+  let editIndex = null;
+  let viewMode = "list";
 
+  const tabsEl = document.getElementById("tabs");
+  const searchInput = document.getElementById("searchInput");
+  const searchBar = document.querySelector(".search-bar");
+  const cardList = document.getElementById("cardList");
+  const sectionTitle = document.getElementById("sectionTitle");
+  const listSection = document.getElementById("listSection");
+  const settingsSection = document.getElementById("settingsSection");
+
+  const adminPass = document.getElementById("adminPass");
+  const passSubmit = document.getElementById("passSubmit");
+  const passwordBlock = document.getElementById("passwordBlock");
+  const formBlock = document.getElementById("formBlock");
+  const newTitle = document.getElementById("newTitle");
+  const newURL = document.getElementById("newURL");
+  const newDetail = document.getElementById("newDetail");
+  const newCategory = document.getElementById("newCategory");
+  const addSubmit = document.getElementById("addSubmit");
+  const formTitle = document.getElementById("formTitle");
+  const formModeLabel = document.getElementById("formModeLabel");
+  const backToList = document.getElementById("backToList");
+
+  const cloudLoad = document.getElementById("cloudLoad");
+  const cloudSave = document.getElementById("cloudSave");
+
+  signInAnonymously(auth).then(() => {
+    loadFromFirebase();
+  });
+
+  function loadFromFirebase() {
+    const dataRef = ref(db, "urlData");
+    onValue(dataRef, (snapshot) => {
+      const val = snapshot.val();
+      items = val ? val : [];
+      render();
+    });
+  }
+
+  function saveToFirebase() {
+    const dataRef = ref(db, "urlData");
+    set(dataRef, items);
+  }
+
+  function updateView() {
+    if (viewMode === "list") {
+      listSection.classList.remove("hidden");
+      settingsSection.classList.add("hidden");
+      sectionTitle.classList.remove("hidden");
+    } else {
+      listSection.classList.add("hidden");
+      settingsSection.classList.remove("hidden");
+      sectionTitle.classList.add("hidden");
+    }
+  }
+
+  function resetForm() {
+    editIndex = null;
+    formTitle.textContent = "新規URL追加";
+    formModeLabel.textContent = "";
+    addSubmit.textContent = "追加";
+    newTitle.value = "";
+    newURL.value = "";
+    newDetail.value = "";
+    newCategory.value = "京王";
+    passwordBlock.classList.add("hidden");
+    formBlock.classList.remove("hidden");
+  }
+
+  function render() {
+    sectionTitle.textContent = currentTab;
+
+    const filtered = items
+      .filter(item => {
+        if (currentTab === "すべて") {
+          if (item.category === "資料" || item.category === "画像") return false;
+        } else if (currentTab !== "すべて" && item.category !== currentTab) {
+          return false;
+        }
+        if (!searchText) return true;
+        return (item.title || "").toLowerCase().includes(searchText.toLowerCase());
+      })
+      .sort((a, b) => (a.title || "").localeCompare(b.title || "", "ja"));
+
+    cardList.innerHTML = "";
+    filtered.forEach((item) => {
+      const card = document.createElement("div");
+      const catClass = "cat-" + (item.category || "");
+      card.className = "card " + catClass;
+
+      const cat = document.createElement("div");
+      cat.className = "card-category";
+      cat.textContent = item.category || "";
+
+      const title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = item.title || "";
+
+      const detail = document.createElement("div");
+      detail.className = "card-detail";
+      detail.textContent = item.detail || "";
+
+      card.appendChild(cat);
+      card.appendChild(title);
+      card.appendChild(detail);
+
+      card.onclick = () => {
+        if (item.url) window.open(item.url, "_blank");
+      };
+
+      const realIndex = items.indexOf(item);
+
+      if (adminMode) {
+        const btns = document.createElement("div");
+        btns.className = "edit-buttons";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "edit-btn";
+        editBtn.textContent = "編集";
+        editBtn.onclick = (e) => {
+          e.stopPropagation();
+          startEdit(item, realIndex);
+        };
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "delete-btn";
+        delBtn.textContent = "削除";
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteItem(realIndex);
+        };
+
+        btns.appendChild(editBtn);
+        btns.appendChild(delBtn);
+        card.appendChild(btns);
+      }
+
+      cardList.appendChild(card);
+    });
+  }
+
+  function startEdit(item, index) {
+    if (!adminMode) return;
+    editIndex = index;
+
+    formTitle.textContent = "URL編集";
+    formModeLabel.textContent = "編集モード";
+    addSubmit.textContent = "上書き保存";
+
+    newTitle.value = item.title || "";
+    newURL.value = item.url || "";
+    newDetail.value = item.detail || "";
+    newCategory.value = item.category || "京王";
+
+    viewMode = "settings";
+    searchBar.classList.add("hidden");
+    passwordBlock.classList.add("hidden");
+    formBlock.classList.remove("hidden");
+    updateView();
+  }
+
+  function deleteItem(index) {
+    if (!adminMode) return;
+    if (!confirm("削除しますか？")) return;
+    items.splice(index, 1);
+    saveToFirebase();
     render();
-  });
-}
-loadFromFirebase();
-
-/* -------------------------
-   Firebase 保存
-------------------------- */
-function saveToFirebase() {
-  set(ref(db, "urlData"), items);
-}
-
-/* -------------------------
-   並び替えロジック
-------------------------- */
-function applySort(list) {
-  if (sortMode === "new") {
-    list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  }
-  if (sortMode === "old") {
-    list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-  }
-  if (sortMode === "az") {
-    list.sort((a, b) =>
-      (a.title || "").localeCompare(b.title || "", "ja", { sensitivity: "base" })
-    );
-  }
-  if (sortMode === "za") {
-    list.sort((a, b) =>
-      (b.title || "").localeCompare(a.title || "", "ja", { sensitivity: "base" })
-    );
-  }
-  if (sortMode === "type") {
-    list.sort((a, b) =>
-      (a.type || "").localeCompare(b.type || "", "ja", { sensitivity: "base" })
-    );
-  }
-}
-/* -------------------------
-   カード描画
-------------------------- */
-function render() {
-  const listArea = document.getElementById("listArea");
-  listArea.innerHTML = "";
-
-  let filtered = items.filter(item => {
-    if (currentTab !== "すべて" && item.category !== currentTab) return false;
-    const word = searchInput.value.trim();
-    if (word && !item.title.includes(word)) return false;
-    return true;
-  });
-
-  applySort(filtered);
-
-  filtered.forEach((item, index) => {
-    const card = document.createElement("div");
-    card.className = "card";
-
-    const title = document.createElement("div");
-    title.className = "card-title";
-    title.textContent = item.title;
-    card.appendChild(title);
-
-    const detail = document.createElement("div");
-    detail.className = "card-detail";
-
-    const type = item.type || "";
-    const dest = item.destination || "";
-    const det = item.detail || "";
-
-    detail.textContent = `${type}${dest}　${det}`;
-    card.appendChild(detail);
-
-    card.addEventListener("click", () => {
-      editIndex = items.indexOf(item);
-      openEdit(item);
-    });
-
-    listArea.appendChild(card);
-  });
-}
-
-/* -------------------------
-   編集画面を開く
-------------------------- */
-function openEdit(item) {
-  document.getElementById("newTitle").value = item.title;
-  document.getElementById("newType").value = item.type || "";
-  document.getElementById("newDest").value = item.destination || "";
-  document.getElementById("newURL").value = item.url;
-  document.getElementById("newDetail").value = item.detail;
-  document.getElementById("newCategory").value = item.category;
-
-  document.getElementById("editArea").classList.remove("hidden");
-  document.getElementById("searchArea").classList.add("hidden");
-  document.getElementById("listArea").classList.add("hidden");
-}
-
-/* -------------------------
-   新規追加・編集保存
-------------------------- */
-document.getElementById("addSubmit").addEventListener("click", () => {
-  const title = newTitle.value.trim();
-  const type = newType.value.trim();
-  const destination = newDest.value.trim();
-  const url = newURL.value.trim();
-  const detail = newDetail.value.trim();
-  const category = normalizeCategory(newCategory.value.trim());
-
-  if (!title || !url) {
-    alert("タイトルとURLは必須です");
-    return;
   }
 
-  if (editIndex !== null) {
-    items[editIndex] = {
-      ...items[editIndex],
-      title, type, destination, url, detail, category
-    };
-  } else {
-    items.push({
-      title, type, destination, url, detail, category,
-      createdAt: Date.now()
-    });
-  }
+  tabsEl.addEventListener("click", (e) => {
+    const tab = e.target.closest(".tab");
+    if (!tab) return;
+    const tabName = tab.dataset.tab;
 
-  saveToFirebase();
-  closeEdit();
-});
-
-/* -------------------------
-   編集画面を閉じる
-------------------------- */
-function closeEdit() {
-  editIndex = null;
-  newTitle.value = "";
-  newType.value = "";
-  newDest.value = "";
-  newURL.value = "";
-  newDetail.value = "";
-  newCategory.value = "";
-
-  document.getElementById("editArea").classList.add("hidden");
-  document.getElementById("searchArea").classList.remove("hidden");
-  document.getElementById("listArea").classList.remove("hidden");
-
-  render();
-}
-
-/* -------------------------
-   タブ切り替え
-------------------------- */
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     tab.classList.add("active");
 
-    currentTab = tab.dataset.cat;
+    if (tabName === "同期・管理") {
+      viewMode = "settings";
+      searchBar.classList.add("hidden");
+      updateView();
+      return;
+    }
+
+    currentTab = tabName;
+    viewMode = "list";
+    searchBar.classList.remove("hidden");
+    updateView();
     render();
   });
-});
 
-/* -------------------------
-   検索
-------------------------- */
-const searchInput = document.getElementById("searchInput");
-searchInput.addEventListener("input", () => render());
+  searchInput.addEventListener("input", () => {
+    searchText = searchInput.value.trim();
+    render();
+  });
 
-/* -------------------------
-   並び替えプルダウン
-------------------------- */
-document.getElementById("sortSelect").addEventListener("change", (e) => {
-  sortMode = e.target.value;
+  passSubmit.addEventListener("click", () => {
+    if (adminPass.value === PASSWORD) {
+      adminMode = true;
+      adminPass.value = "";
+      alert("編集モードが有効になりました");
+      passwordBlock.classList.add("hidden");
+      formBlock.classList.remove("hidden");
+      resetForm();
+      render();
+    } else {
+      alert("パスワードが違います");
+    }
+  });
+
+  addSubmit.addEventListener("click", () => {
+    const title = newTitle.value.trim();
+    const url = newURL.value.trim();
+    const detail = newDetail.value.trim();
+    const category = newCategory.value;
+
+    if (!title || !url) {
+      alert("タイトルとURLは必須です");
+      return;
+    }
+
+    if (editIndex !== null) {
+      items[editIndex] = { title, url, detail, category };
+    } else {
+      items.push({ title, url, detail, category });
+    }
+
+    saveToFirebase();
+    alert("保存しました");
+
+    resetForm();
+    viewMode = "list";
+    searchBar.classList.remove("hidden");
+    updateView();
+    render();
+  });
+
+  backToList.addEventListener("click", () => {
+    resetForm();
+    viewMode = "list";
+    searchBar.classList.remove("hidden");
+    updateView();
+    render();
+  });
+
+  cloudLoad.addEventListener("click", () => {
+    loadFromFirebase();
+    alert("クラウドから最新データを読み込みました");
+  });
+
+  cloudSave.addEventListener("click", () => {
+    saveToFirebase();
+    alert("クラウドに保存しました");
+  });
+
+  updateView();
   render();
-});
 </script>
 
 </body>
 </html>
+
+
