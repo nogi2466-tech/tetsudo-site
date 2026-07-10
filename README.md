@@ -579,7 +579,8 @@
   });
 
   // 追加・編集保存
-  addSubmit.addEventListener("click", async () => {
+  
+addSubmit.addEventListener("click", async () => {
   const title = newTitle.value.trim();
   const url = newURL.value.trim();
   const detail = newDetail.value.trim();
@@ -597,18 +598,22 @@
     imageUrl = items[editIndex].imageUrl || "";
   }
 
-  // 画像削除チェック
+  // 🔥 古い画像削除処理を安全化（URL → パス変換）
   if (deleteImage.checked && imageUrl) {
     try {
-      const oldRef = sRef(storage, imageUrl);
+      // URL からパス部分だけ抽出
+      const path = imageUrl.split("/o/")[1].split("?")[0];
+      const decodedPath = decodeURIComponent(path);
+
+      const oldRef = sRef(storage, decodedPath);
       await deleteObject(oldRef);
+      imageUrl = "";
     } catch (e) {
       console.log("画像削除失敗:", e);
     }
-    imageUrl = "";
   }
 
-  // 🔥 画像追加時のエラー対策（ファイル名を安全化）
+  // 🔥 新しい画像を追加したときの処理（安全なファイル名）
   if (newImage.files.length > 0) {
     const file = newImage.files[0];
 
@@ -623,7 +628,7 @@
     } catch (e) {
       console.log("画像アップロード失敗:", e);
       alert("画像のアップロードに失敗しました");
-      return; // 🔥 ここで止めることで保存失敗を防ぐ
+      return;
     }
   }
 
@@ -645,6 +650,7 @@
   updateView();
   render();
 });
+
 
   // 戻る
   backToList.addEventListener("click", () => {
