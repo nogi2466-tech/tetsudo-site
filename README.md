@@ -580,56 +580,71 @@
 
   // 追加・編集保存
   addSubmit.addEventListener("click", async () => {
-    const title = newTitle.value.trim();
-    const url = newURL.value.trim();
-    const detail = newDetail.value.trim();
-    const category = newCategory.value;
+  const title = newTitle.value.trim();
+  const url = newURL.value.trim();
+  const detail = newDetail.value.trim();
+  const category = newCategory.value;
 
-    if (!title || !url) {
-      alert("タイトルとURLは必須です");
-      return;
+  if (!title || !url) {
+    alert("タイトルとURLは必須です");
+    return;
+  }
+
+  let imageUrl = "";
+
+  // 編集モードなら既存画像を保持
+  if (editIndex !== null) {
+    imageUrl = items[editIndex].imageUrl || "";
+  }
+
+  // 画像削除チェック
+  if (deleteImage.checked && imageUrl) {
+    try {
+      const oldRef = sRef(storage, imageUrl);
+      await deleteObject(oldRef);
+    } catch (e) {
+      console.log("画像削除失敗:", e);
     }
+    imageUrl = "";
+  }
 
-    let imageUrl = "";
+  // 🔥 画像追加時のエラー対策（ファイル名を安全化）
+  if (newImage.files.length > 0) {
+    const file = newImage.files[0];
 
-    if (editIndex !== null) {
-      imageUrl = items[editIndex].imageUrl || "";
-    }
+    // 日本語・記号を安全な文字に変換
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
 
-    if (deleteImage.checked && imageUrl) {
-      try {
-        const oldRef = sRef(storage, imageUrl);
-        await deleteObject(oldRef);
-      } catch (e) {
-        console.log("画像削除失敗:", e);
-      }
-      imageUrl = "";
-    }
+    const storageRef = sRef(storage, "images/" + Date.now() + "_" + safeName);
 
-    if (newImage.files.length > 0) {
-      const file = newImage.files[0];
-      const storageRef = sRef(storage, "images/" + Date.now() + "_" + file.name);
+    try {
       await uploadBytes(storageRef, file);
       imageUrl = await getDownloadURL(storageRef);
+    } catch (e) {
+      console.log("画像アップロード失敗:", e);
+      alert("画像のアップロードに失敗しました");
+      return; // 🔥 ここで止めることで保存失敗を防ぐ
     }
+  }
 
-    const newItem = { title, url, detail, category, imageUrl };
+  const newItem = { title, url, detail, category, imageUrl };
 
-    if (editIndex !== null) {
-      items[editIndex] = newItem;
-    } else {
-      items.push(newItem);
-    }
+  // 編集モードなら上書き
+  if (editIndex !== null) {
+    items[editIndex] = newItem;
+  } else {
+    items.push(newItem);
+  }
 
-    saveToFirebase();
-    alert("保存しました");
+  saveToFirebase();
+  alert("保存しました");
 
-    resetForm();
-    viewMode = "list";
-    searchBar.classList.remove("hidden");
-    updateView();
-    render();
-  });
+  resetForm();
+  viewMode = "list";
+  searchBar.classList.remove("hidden");
+  updateView();
+  render();
+});
 
   // 戻る
   backToList.addEventListener("click", () => {
