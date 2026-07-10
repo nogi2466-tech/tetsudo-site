@@ -22,7 +22,6 @@
     text-align: center;
   }
 
-  /* ▼ タブ（横並び＋横スクロール） */
   .tabs {
     display: flex;
     flex-direction: row;
@@ -49,7 +48,6 @@
     font-weight: 600;
   }
 
-  /* ▼ タブ色 */
   .tab[data-tab="京王"] { background: #b4007f; }
   .tab[data-tab="JR"] { background: #4caf50; }
   .tab[data-tab="大手私鉄"] { background: #ffd54f; color:#333; }
@@ -79,7 +77,6 @@
     text-align: center;
   }
 
-  /* ▼ URL一覧を縦スクロール可能にする */
   .card-list {
     display: flex;
     flex-direction: column;
@@ -101,7 +98,6 @@
 
   .card:hover { background: #f7faff; transform: translateY(-2px); }
 
-  /* ▼ カード色 */
   .cat-京王 { border-left-color: #b4007f; }
   .cat-JR { border-left-color: #4caf50; }
   .cat-大手私鉄 { border-left-color: #ffd54f; }
@@ -112,18 +108,42 @@
 
   .card-category { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
   .card-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-  .card-detail { font-size: 16px; color: #444; }
+  .card-detail { font-size: 16px; color: #444; white-space: pre-wrap; }
 
-  .edit-buttons { margin-top: 8px; display: flex; gap: 8px; }
-  .edit-btn { background: #1976d2; color:#fff; border:none; padding:6px 10px; border-radius:6px; }
-  .delete-btn { background:#d32f2f; color:#fff; border:none; padding:6px 10px; border-radius:6px; }
+  button {
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    padding: 12px 18px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+    margin-top: 10px;
+  }
 
-  .settings { max-width: 520px; margin: 0 auto; }
+  button:hover {
+    background: #0f5bb5;
+  }
+
+  .settings {
+    max-width: 520px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
   .settings label { display:block; margin:10px 0 4px; }
+
   .settings input, .settings textarea, .settings select {
     width:100%; padding:8px; border-radius:6px; border:1px solid #bbb;
   }
-  .settings textarea { min-height:70px; }
+
+  .settings textarea {
+    min-height: 120px;
+    max-height: 120px;
+    resize: none;
+  }
 
   .hidden { display:none; }
 </style>
@@ -136,7 +156,6 @@
   <h1>tetsudo-site6</h1>
 </header>
 
-<!-- ▼ タブ -->
 <div class="tabs" id="tabs">
   <div class="tab active" data-tab="すべて">すべて</div>
   <div class="tab" data-tab="京王">京王</div>
@@ -165,7 +184,7 @@
     <div class="settings" id="passwordBlock">
       <label>編集パスワード</label>
       <input type="password" id="adminPass">
-      <button id="passSubmit" style="background:#555;color:#fff;">送信</button>
+      <button id="passSubmit">送信</button>
     </div>
 
     <div class="settings hidden" id="formBlock">
@@ -192,7 +211,7 @@
         <option value="画像">画像</option>
       </select>
 
-      <button id="addSubmit" style="background:#1976d2;color:#fff;">追加</button>
+      <button id="addSubmit">追加</button>
 
       <hr>
       <button id="cloudLoad">クラウド受信</button>
@@ -203,7 +222,6 @@
 
 </div>
 
-<!-- ▼ JavaScript（画像機能なし） -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
@@ -234,7 +252,6 @@
 
   const tabsEl = document.getElementById("tabs");
   const searchInput = document.getElementById("searchInput");
-  const searchBar = document.querySelector(".search-bar");
   const cardList = document.getElementById("cardList");
   const sectionTitle = document.getElementById("sectionTitle");
   const listSection = document.getElementById("listSection");
@@ -294,33 +311,24 @@
     sectionTitle.textContent = currentTab;
 
     const filtered = items.filter(item => {
-
-      // ▼ すべてタブ → 資料と画像を除外
       if (currentTab === "すべて") {
         if (item.category === "資料") return false;
         if (item.category === "画像") return false;
         return true;
       }
-
-      // ▼ 通常タブ
       if (item.category !== currentTab) return false;
-
-      // ▼ 検索
       if (!searchText) return true;
       return (item.title || "").toLowerCase().includes(searchText.toLowerCase());
     });
 
-    // ▼ 並び順（数字 → 50音）
     filtered.sort((a, b) => {
       const ta = a.title || "";
       const tb = b.title || "";
       const numA = ta.match(/^\d+$/);
       const numB = tb.match(/^\d+$/);
-
       if (numA && numB) return Number(ta) - Number(tb);
       if (numA) return -1;
       if (numB) return 1;
-
       return ta.localeCompare(tb, "ja");
     });
 
@@ -341,6 +349,7 @@
       const detail = document.createElement("div");
       detail.className = "card-detail";
       detail.textContent = item.detail;
+      detail.style.whiteSpace = "pre-wrap";
 
       card.appendChild(cat);
       card.appendChild(title);
@@ -355,7 +364,6 @@
         btns.className = "edit-buttons";
 
         const editBtn = document.createElement("button");
-        editBtn.className = "edit-btn";
         editBtn.textContent = "編集";
         editBtn.onclick = (e) => {
           e.stopPropagation();
@@ -363,7 +371,6 @@
         };
 
         const delBtn = document.createElement("button");
-        delBtn.className = "delete-btn";
         delBtn.textContent = "削除";
         delBtn.onclick = (e) => {
           e.stopPropagation();
@@ -382,14 +389,11 @@
   function startEdit(item) {
     adminMode = true;
     editIndex = items.indexOf(item);
-
     newTitle.value = item.title;
     newURL.value = item.url;
     newDetail.value = item.detail;
     newCategory.value = item.category;
-
     addSubmit.textContent = "上書き保存";
-
     viewMode = "settings";
     updateView();
   }
@@ -405,18 +409,14 @@
   tabsEl.addEventListener("click", (e) => {
     const tab = e.target.closest(".tab");
     if (!tab) return;
-
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     tab.classList.add("active");
-
     currentTab = tab.dataset.tab;
-
     if (currentTab === "同期・管理") {
       viewMode = "settings";
       updateView();
       return;
     }
-
     viewMode = "list";
     updateView();
     render();
