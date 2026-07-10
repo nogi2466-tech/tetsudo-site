@@ -22,12 +22,12 @@
     text-align: center;
   }
 
-  /* ▼ タブ（縦スクロール） */
+  /* ▼ タブ（横並び＋横スクロール） */
   .tabs {
     display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    max-height: 240px;
+    flex-direction: row;
+    overflow-x: auto;
+    white-space: nowrap;
     gap: 6px;
     padding: 10px;
   }
@@ -79,10 +79,14 @@
     text-align: center;
   }
 
+  /* ▼ URL一覧を縦スクロール可能にする */
   .card-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 4px;
   }
 
   .card {
