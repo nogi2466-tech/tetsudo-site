@@ -81,20 +81,34 @@ main{padding:16px;}
   gap:10px;
 }
 
+/* ⭐ カード横並び（画像左・文字右） */
 .card{
   background:#fff;
-  padding:16px;
+  padding:12px;
   border-radius:12px;
   border-left:6px solid #ccc;
   cursor:pointer;
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
 }
 
-.cat-京王{border-left-color:#b4007f;}
-.cat-JR{border-left-color:#4caf50;}
-.cat-大手私鉄{border-left-color:#ffd54f;}
-.cat-その他{border-left-color:#9e9e9e;}
-.cat-資料{border-left-color:#ba68c8;}
-.cat-画像{border-left-color:#42a5f5;}
+.card-left{
+  width:35%;
+}
+
+.card-right{
+  width:65%;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.card-image{
+  width:100%;
+  border-radius:10px;
+  object-fit:cover;
+}
 
 .card-title{
   font-size:17px;
@@ -103,13 +117,15 @@ main{padding:16px;}
 
 .card-detail{
   font-size:15px;
+  line-height:1.4;
 }
 
-.card-image{
-  width:100%;
-  border-radius:10px;
-  margin:10px 0;
-}
+.cat-京王{border-left-color:#b4007f;}
+.cat-JR{border-left-color:#4caf50;}
+.cat-大手私鉄{border-left-color:#ffd54f;}
+.cat-その他{border-left-color:#9e9e9e;}
+.cat-資料{border-left-color:#ba68c8;}
+.cat-画像{border-left-color:#42a5f5;}
 
 .edit-buttons{
   margin-top:10px;
@@ -286,10 +302,17 @@ function render() {
     const detailText = (item.detail || "").replace(/\n/g, "<br>");
 
     card.innerHTML =
-    `<div class="card-category">${item.category}</div>
-     <div class="card-title">${item.title}</div>
-     ${item.image ? `<img src="${item.image}" class="card-image">` : ""}
-     <div class="card-detail">${detailText}</div>`;
+    `
+    <div class="card-left">
+      ${item.image ? `<img src="${item.image}" class="card-image">` : ""}
+    </div>
+
+    <div class="card-right">
+      <div class="card-category">${item.category}</div>
+      <div class="card-title">${item.title}</div>
+      <div class="card-detail">${detailText}</div>
+    </div>
+    `;
 
     card.onclick = () => {
       if (item.url) window.open(item.url, "_blank");
