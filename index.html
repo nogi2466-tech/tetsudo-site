@@ -163,6 +163,13 @@ main{padding:16px;}
   border:1px solid #bbb;
 }
 
+/* ⭐ 詳細欄の枠固定（resize禁止） */
+.settings textarea{
+  resize:none;
+  font-size:15px;
+  height:120px;
+}
+
 .hidden{display:none;}
 </style>
 </head>
@@ -293,6 +300,18 @@ function render() {
     return (item.title || "").toLowerCase().includes(searchText.toLowerCase());
   });
 
+  /* ⭐ 並び順（数字昇順＋50音順） */
+  filtered.sort((a, b) => {
+    const A = a.title;
+    const B = b.title;
+
+    if (!isNaN(A) && !isNaN(B)) {
+      return Number(A) - Number(B);
+    }
+
+    return A.localeCompare(B, "ja");
+  });
+
   cardList.innerHTML = "";
 
   filtered.forEach(item => {
@@ -301,7 +320,6 @@ function render() {
 
     const detailText = (item.detail || "").replace(/\n/g, "<br>");
 
-    /* ⭐ 横並びカード（絶対に壊れない1行構造） */
     card.innerHTML =
       `<div class="card-left">${item.image ? `<img src="${item.image}" class="card-image">` : ""}</div>
        <div class="card-right">
@@ -418,7 +436,6 @@ function deleteItem(index) {
   render();
 }
 
-/* ⭐ タブ切り替えが動かない原因 → tabsEl が存在しなかった */
 tabsEl.addEventListener("click", e => {
   const tab = e.target.closest(".tab");
   if (!tab) return;
