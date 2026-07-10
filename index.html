@@ -7,45 +7,14 @@
 
 <style>
 *{box-sizing:border-box;}
-
-body{
-  margin:0;
-  font-family:system-ui;
-  font-size:16px;
-  background:#f5f5f5;
-}
-
+body{margin:0;font-family:system-ui;background:#f5f5f5;}
 .container{background:#fff;min-height:100vh;}
 
-header{
-  background:#1976d2;
-  color:#fff;
-  padding:12px;
-  text-align:center;
-}
+header{background:#1976d2;color:#fff;padding:12px;text-align:center;}
 
-.tabs{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  justify-content:center;
-  padding:10px;
-}
-
-.tab{
-  padding:8px 14px;
-  border-radius:18px;
-  cursor:pointer;
-  color:#fff;
-  font-size:15px;
-}
-
-.tab.active{
-  border:3px solid #fff;
-  background:inherit;
-  color:#fff;
-  font-weight:bold;
-}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:10px;}
+.tab{padding:8px 14px;border-radius:18px;cursor:pointer;color:#fff;font-size:15px;}
+.tab.active{border:3px solid #fff;font-weight:bold;}
 
 .tab[data-tab="京王"]{background:#b4007f;}
 .tab[data-tab="JR"]{background:#4caf50;}
@@ -55,70 +24,23 @@ header{
 .tab[data-tab="画像"]{background:#42a5f5;}
 .tab[data-tab="同期・管理"]{background:#555;}
 
-.search-bar{
-  background:#e3f2fd;
-  padding:10px;
-}
-
-.search-bar input{
-  width:100%;
-  padding:8px;
-  border-radius:6px;
-  border:1px solid #bbb;
-}
+.search-bar{background:#e3f2fd;padding:10px;}
+.search-bar input{width:100%;padding:8px;border-radius:6px;border:1px solid #bbb;}
 
 main{padding:16px;}
+.section-title{text-align:center;font-size:18px;margin-bottom:12px;}
 
-.section-title{
-  text-align:center;
-  font-size:18px;
-  margin-bottom:12px;
-}
+.card-list{display:flex;flex-direction:column;gap:10px;}
 
-.card-list{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-/* ⭐ カード横並び（画像左・文字右） */
 .card{
-  background:#fff;
-  padding:12px;
-  border-radius:12px;
-  border-left:6px solid #ccc;
-  cursor:pointer;
-  display:flex;
-  gap:12px;
-  align-items:flex-start;
+  background:#fff;padding:12px;border-radius:12px;border-left:6px solid #ccc;
+  cursor:pointer;display:flex;gap:12px;align-items:flex-start;
 }
-
-.card-left{
-  width:35%;
-}
-
-.card-right{
-  width:65%;
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-
-.card-image{
-  width:100%;
-  border-radius:10px;
-  object-fit:cover;
-}
-
-.card-title{
-  font-size:17px;
-  font-weight:bold;
-}
-
-.card-detail{
-  font-size:15px;
-  line-height:1.4;
-}
+.card-left{width:35%;}
+.card-right{width:65%;display:flex;flex-direction:column;gap:4px;}
+.card-image{width:100%;border-radius:10px;object-fit:cover;}
+.card-title{font-size:17px;font-weight:bold;}
+.card-detail{font-size:15px;line-height:1.4;}
 
 .cat-京王{border-left-color:#b4007f;}
 .cat-JR{border-left-color:#4caf50;}
@@ -127,48 +49,15 @@ main{padding:16px;}
 .cat-資料{border-left-color:#ba68c8;}
 .cat-画像{border-left-color:#42a5f5;}
 
-.edit-buttons{
-  margin-top:10px;
-  display:flex;
-  gap:8px;
-}
+.edit-buttons{margin-top:10px;display:flex;gap:8px;}
+.edit-btn{background:#1976d2;color:#fff;padding:6px 10px;border:none;border-radius:6px;}
+.delete-btn{background:#d32f2f;color:#fff;padding:6px 10px;border:none;border-radius:6px;}
 
-.edit-btn{
-  background:#1976d2;
-  color:#fff;
-  padding:6px 10px;
-  border:none;
-  border-radius:6px;
+.settings{max-width:500px;margin:auto;}
+.settings input,.settings textarea,.settings select{
+  width:100%;padding:8px;border-radius:6px;border:1px solid #bbb;
 }
-
-.delete-btn{
-  background:#d32f2f;
-  color:#fff;
-  padding:6px 10px;
-  border:none;
-  border-radius:6px;
-}
-
-.settings{
-  max-width:500px;
-  margin:auto;
-}
-
-.settings input,
-.settings textarea,
-.settings select{
-  width:100%;
-  padding:8px;
-  border-radius:6px;
-  border:1px solid #bbb;
-}
-
-/* ⭐ 詳細欄の枠固定（resize禁止） */
-.settings textarea{
-  resize:none;
-  font-size:15px;
-  height:120px;
-}
+.settings textarea{resize:none;font-size:15px;height:120px;}
 
 .hidden{display:none;}
 </style>
@@ -179,7 +68,6 @@ main{padding:16px;}
 
 <header>
   <h1>tetsudo-site6</h1>
-
   <div class="tabs" id="tabsEl">
     <div class="tab active" data-tab="すべて">すべて</div>
     <div class="tab" data-tab="京王">京王</div>
@@ -300,15 +188,10 @@ function render() {
     return (item.title || "").toLowerCase().includes(searchText.toLowerCase());
   });
 
-  /* ⭐ 並び順（数字昇順＋50音順） */
   filtered.sort((a, b) => {
     const A = a.title;
     const B = b.title;
-
-    if (!isNaN(A) && !isNaN(B)) {
-      return Number(A) - Number(B);
-    }
-
+    if (!isNaN(A) && !isNaN(B)) return Number(A) - Number(B);
     return A.localeCompare(B, "ja");
   });
 
@@ -379,9 +262,9 @@ addSubmit.addEventListener("click", async () => {
   }
 
   let imageURL = "";
-  if (imageFile) {
-    imageURL = await uploadImage(imageFile);
-  }
+  if (imageFile) imageURL = await uploadImage(imageFile);
+
+  let scrollTargetIndex = null;
 
   if (editIndex !== null) {
     items[editIndex] = {
@@ -392,6 +275,7 @@ addSubmit.addEventListener("click", async () => {
       category,
       image: imageURL || items[editIndex].image
     };
+    scrollTargetIndex = editIndex;
   } else {
     items.push({
       title,
@@ -401,6 +285,7 @@ addSubmit.addEventListener("click", async () => {
       image: imageURL,
       createdAt: Date.now()
     });
+    scrollTargetIndex = items.length - 1;
   }
 
   saveToFirebase();
@@ -411,21 +296,29 @@ addSubmit.addEventListener("click", async () => {
   searchBar.classList.remove("hidden");
   updateView();
   render();
+
+  setTimeout(() => {
+    const cards = document.querySelectorAll(".card");
+    if (cards[scrollTargetIndex]) {
+      cards[scrollTargetIndex].scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  }, 200);
 });
 
 function startEdit(item, index) {
-  adminMode && (
-    editIndex = index,
-    newTitle.value = item.title,
-    newURL.value = item.url,
-    newDetail.value = item.detail,
-    newCategory.value = item.category,
-    viewMode = "settings",
-    searchBar.classList.add("hidden"),
-    passwordBlock.classList.add("hidden"),
-    formBlock.classList.remove("hidden"),
-    updateView()
-  );
+  adminMode = true;
+  editIndex = index;
+
+  newTitle.value = item.title;
+  newURL.value = item.url;
+  newDetail.value = item.detail;
+  newCategory.value = item.category;
+
+  viewMode = "settings";
+  searchBar.classList.add("hidden");
+  passwordBlock.classList.add("hidden");
+  formBlock.classList.remove("hidden");
+  updateView();
 }
 
 function deleteItem(index) {
