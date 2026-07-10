@@ -54,10 +54,36 @@ main{padding:16px;}
 .delete-btn{background:#d32f2f;color:#fff;padding:6px 10px;border:none;border-radius:6px;}
 
 .settings{max-width:500px;margin:auto;}
-.settings input,.settings textarea,.settings select{
-  width:100%;padding:8px;border-radius:6px;border:1px solid #bbb;
+
+/* ⭐ 新規追加・編集画面の間隔を前のデザインに戻す */
+#formBlock {
+  padding: 20px 0;
 }
-.settings textarea{resize:none;font-size:15px;height:120px;}
+
+#formBlock label {
+  margin-top: 18px;
+  margin-bottom: 6px;
+  display: block;
+  font-size: 16px;
+}
+
+#formBlock input,
+#formBlock textarea,
+#formBlock select {
+  margin-bottom: 18px;
+  padding: 10px;
+  font-size: 15px;
+}
+
+#addSubmit,
+#cloudLoad,
+#cloudSave,
+#backToList {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  font-size: 15px;
+}
 
 .hidden{display:none;}
 </style>
