@@ -62,12 +62,12 @@ main{padding:16px;}
 .hidden{display:none;}
 </style>
 </head>
-
 <body>
 <div class="container">
 
 <header>
   <h1>tetsudo-site6</h1>
+
   <div class="tabs" id="tabsEl">
     <div class="tab active" data-tab="すべて">すべて</div>
     <div class="tab" data-tab="京王">京王</div>
@@ -134,7 +134,6 @@ main{padding:16px;}
     </div>
   </div>
 </main>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
@@ -314,6 +313,9 @@ function startEdit(item, index) {
   newDetail.value = item.detail;
   newCategory.value = item.category;
 
+  formTitle.textContent = "編集モード（上書き保存）";
+  addSubmit.textContent = "上書き保存";
+
   viewMode = "settings";
   searchBar.classList.add("hidden");
   passwordBlock.classList.add("hidden");
@@ -405,6 +407,10 @@ function resetForm() {
   newDetail.value = "";
   newCategory.value = "京王";
   document.getElementById("newImageFile").value = "";
+
+  formTitle.textContent = "新規URL追加";
+  addSubmit.textContent = "追加";
+
   passwordBlock.classList.add("hidden");
   formBlock.classList.remove("hidden");
 }
@@ -412,6 +418,6 @@ function resetForm() {
 updateView();
 render();
 </script>
-
+</div> <!-- container -->
 </body>
 </html>
