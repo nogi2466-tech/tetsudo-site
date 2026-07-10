@@ -92,21 +92,33 @@
     background:#1976d2;
     color:#fff;
     border:none;
-    padding:10px 14px;
+    padding:8px 12px;
     font-size:15px;
     border-radius:6px;
     cursor:pointer;
-    width: 60%;
-    margin: 12px auto;
+    width: 50%;
+    margin: 14px auto;
     display:block;
   }
   .main-btn:hover { background:#0f5bb5; }
 
-  /* ▼ 他のボタンは前のまま */
+  /* ▼ 編集／削除ボタンの見栄え改善 */
+  .edit-buttons {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+  }
+
   .edit-btn { background:#1976d2; color:#fff; padding:6px 10px; border:none; border-radius:6px; }
   .delete-btn { background:#d32f2f; color:#fff; padding:6px 10px; border:none; border-radius:6px; }
 
-  .settings { max-width:500px; margin:0 auto; padding:10px; }
+  .settings {
+    max-width:500px;
+    margin:0 auto;
+    padding:10px;
+    text-align:center; /* ← ボタン中央寄せ */
+  }
+
   .settings input, .settings textarea, .settings select {
     width:100%; padding:8px; border-radius:6px; border:1px solid #bbb;
   }
@@ -177,7 +189,6 @@
         <option value="画像">画像</option>
       </select>
 
-      <!-- ▼ この2つだけデザイン変更 -->
       <button id="addSubmit" class="main-btn">追加</button>
 
       <hr>
@@ -256,6 +267,21 @@
       return item.category === currentTab;
     });
 
+    /* ▼ 並び順（数字 → 50音順） */
+    filtered.sort((a, b) => {
+      const ta = a.title || "";
+      const tb = b.title || "";
+
+      const numA = ta.match(/^\d+$/);
+      const numB = tb.match(/^\d+$/);
+
+      if (numA && numB) return Number(ta) - Number(tb);
+      if (numA) return -1;
+      if (numB) return 1;
+
+      return ta.localeCompare(tb, "ja");
+    });
+
     filtered.forEach(item => {
       const card = document.createElement("div");
       card.className = "card cat-" + item.category;
@@ -269,6 +295,9 @@
       card.onclick = () => window.open(item.url, "_blank");
 
       if (adminMode) {
+        const btns = document.createElement("div");
+        btns.className = "edit-buttons";
+
         const editBtn = document.createElement("button");
         editBtn.className = "edit-btn";
         editBtn.textContent = "編集";
@@ -284,8 +313,9 @@
           render();
         };
 
-        card.appendChild(editBtn);
-        card.appendChild(delBtn);
+        btns.appendChild(editBtn);
+        btns.appendChild(delBtn);
+        card.appendChild(btns);
       }
 
       cardList.appendChild(card);
