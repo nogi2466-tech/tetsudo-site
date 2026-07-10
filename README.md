@@ -173,7 +173,7 @@ main{padding:16px;}
 <header>
   <h1>tetsudo-site6</h1>
 
-  <div class="tabs" id="tabs">
+  <div class="tabs" id="tabsEl">
     <div class="tab active" data-tab="すべて">すべて</div>
     <div class="tab" data-tab="京王">京王</div>
     <div class="tab" data-tab="JR">JR</div>
@@ -185,7 +185,7 @@ main{padding:16px;}
   </div>
 </header>
 
-<div class="search-bar">
+<div class="search-bar" id="searchBar">
   <input type="text" id="searchInput" placeholder="タイトルで検索…">
 </div>
 
@@ -301,18 +301,14 @@ function render() {
 
     const detailText = (item.detail || "").replace(/\n/g, "<br>");
 
+    /* ⭐ 横並びカード（絶対に壊れない1行構造） */
     card.innerHTML =
-    `
-    <div class="card-left">
-      ${item.image ? `<img src="${item.image}" class="card-image">` : ""}
-    </div>
-
-    <div class="card-right">
-      <div class="card-category">${item.category}</div>
-      <div class="card-title">${item.title}</div>
-      <div class="card-detail">${detailText}</div>
-    </div>
-    `;
+      `<div class="card-left">${item.image ? `<img src="${item.image}" class="card-image">` : ""}</div>
+       <div class="card-right">
+         <div class="card-category">${item.category}</div>
+         <div class="card-title">${item.title}</div>
+         <div class="card-detail">${detailText}</div>
+       </div>`;
 
     card.onclick = () => {
       if (item.url) window.open(item.url, "_blank");
@@ -422,6 +418,7 @@ function deleteItem(index) {
   render();
 }
 
+/* ⭐ タブ切り替えが動かない原因 → tabsEl が存在しなかった */
 tabsEl.addEventListener("click", e => {
   const tab = e.target.closest(".tab");
   if (!tab) return;
@@ -508,4 +505,3 @@ render();
 
 </body>
 </html>
-
