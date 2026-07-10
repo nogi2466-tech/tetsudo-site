@@ -196,7 +196,6 @@
     .hidden { display: none; }
   </style>
 </head>
-
 <body>
 <div class="container">
 
@@ -281,9 +280,245 @@
 </main>
 
 </div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+
+  import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject }
+    from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD55Pawag1UichGwM-Uxddivb8lFr7QOU8",
+    authDomain: "tetsudo-site6.firebaseapp.com",
+    databaseURL: "https://tetsudo-site6-default-rtdb.firebaseio.com",
+    projectId: "tetsudo-site6",
+    storageBucket: "tetsudo-site6.appspot.com",
+    messagingSenderId: "563943849207",
+    appId: "1:563943849207:web:1c813365201cb431d6e7f2"
+  };
+
+  const PASSWORD = "0829";
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase();
+  const auth = getAuth();
+  const storage = getStorage();
+
+  let items = [];
+  let currentTab = "すべて";
+  let searchText = "";
+  let adminMode = false;
+  let editIndex = null;
+  let viewMode = "list";
+
+  const tabsEl = document.getElementById("tabs");
+  const searchInput = document.getElementById("searchInput");
+  const searchBar = document.querySelector(".search-bar");
+  const cardList = document.getElementById("cardList");
+  const sectionTitle = document.getElementById("sectionTitle");
+  const listSection = document.getElementById("listSection");
+  const settingsSection = document.getElementById("settingsSection");
+
+  const adminPass = document.getElementById("adminPass");
+  const passSubmit = document.getElementById("passSubmit");
+  const passwordBlock = document.getElementById("passwordBlock");
+  const formBlock = document.getElementById("formBlock");
+  const newTitle = document.getElementById("newTitle");
+  const newURL = document.getElementById("newURL");
+  const newDetail = document.getElementById("newDetail");
+  const newCategory = document.getElementById("newCategory");
+  const newImage = document.getElementById("newImage");
+  const deleteImage = document.getElementById("deleteImage");
+  const addSubmit = document.getElementById("addSubmit");
+  const formTitle = document.getElementById("formTitle");
+  const formModeLabel = document.getElementById("formModeLabel");
+  const backToList = document.getElementById("backToList");
+
+  const cloudLoad = document.getElementById("cloudLoad");
+  const cloudSave = document.getElementById("cloudSave");
+
+  // Firebase 認証（匿名）
+  signInAnonymously(auth).then(() => {
+    loadFromFirebase();
+  });
+
+  // Firebase からデータ読み込み
+  function loadFromFirebase() {
+    const dataRef = ref(db, "urlData");
+    onValue(dataRef, (snapshot) => {
+      const val = snapshot.val();
+      items = val ? val : [];
+      render();
+    });
+  }
+
+  // Firebase に保存
+  function saveToFirebase() {
+    const dataRef = ref(db, "urlData");
+    set(dataRef, items);
+  }
+
+  // 画面切り替え
+  function updateView() {
+    if (viewMode === "list") {
+      listSection.classList.remove("hidden");
+      settingsSection.classList.add("hidden");
+      sectionTitle.classList.remove("hidden");
+    } else {
+      listSection.classList.add("hidden");
+      settingsSection.classList.remove("hidden");
+      sectionTitle.classList.add("hidden");
+    }
+  }
+
+  // フォーム初期化
+  function resetForm() {
+    editIndex = null;
+    formTitle.textContent = "新規URL追加";
+    formModeLabel.textContent = "";
+    addSubmit.textContent = "追加";
+    newTitle.value = "";
+    newURL.value = "";
+    newDetail.value = "";
+    newCategory.value = "京王";
+    newImage.value = "";
+    deleteImage.checked = false;
+    passwordBlock.classList.add("hidden");
+    formBlock.classList.remove("hidden");
+  }
+  // カード描画処理
+  function render() {
+    sectionTitle.textContent = currentTab;
+
+    const filtered = items
+      .filter(item => {
+        if (currentTab !== "すべて" && item.category !== currentTab) return false;
+        if (!searchText) return true;
+        return (item.title || "").toLowerCase().includes(searchText.toLowerCase());
+      })
+      .sort((a, b) => {
+        const ta = a.title || "";
+        const tb = b.title || "";
+
+        const numA = ta.match(/^\d+$/);
+        const numB = tb.match(/^\d+$/);
+
+        if (numA && numB) return Number(ta) - Number(tb);
+        if (numA) return -1;
+        if (numB) return 1;
+
+        return ta.localeCompare(tb, "ja");
+      });
+
+    cardList.innerHTML = "";
+    filtered.forEach((item) => {
+      const card = document.createElement("div");
+      const catClass = "cat-" + (item.category || "");
+      card.className = "card " + catClass;
+
+      const wrapper = document.createElement("div");
+      wrapper.style.display = "flex";
+      wrapper.style.alignItems = "flex-start";
+      wrapper.style.gap = "12px";
+
+      if (item.imageUrl) {
+        const img = document.createElement("img");
+        img.src = item.imageUrl;
+        img.style.width = "80px";
+        img.style.height = "80px";
+        img.style.objectFit = "cover";
+        img.style.borderRadius = "8px";
+        wrapper.appendChild(img);
+      }
+
+      const textBox = document.createElement("div");
+      textBox.style.flex = "1";
+
+      const cat = document.createElement("div");
+      cat.className = "card-category";
+      cat.textContent = item.category || "";
+
+      const title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = item.title || "";
+
+      const detail = document.createElement("div");
+      detail.className = "card-detail";
+      detail.textContent = item.detail || "";
+
+      textBox.appendChild(cat);
+      textBox.appendChild(title);
+      textBox.appendChild(detail);
+
+      wrapper.appendChild(textBox);
+      card.appendChild(wrapper);
+
+      card.onclick = () => {
+        if (item.url) window.open(item.url, "_blank");
+      };
+
+      const realIndex = items.indexOf(item);
+
+      if (adminMode) {
+        const btns = document.createElement("div");
+        btns.className = "edit-buttons";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "edit-btn";
+        editBtn.textContent = "編集";
+        editBtn.onclick = (e) => {
+          e.stopPropagation();
+          startEdit(item, realIndex);
+        };
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "delete-btn";
+        delBtn.textContent = "削除";
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteItem(realIndex);
+        };
+
+        btns.appendChild(editBtn);
+        btns.appendChild(delBtn);
+        card.appendChild(btns);
+      }
+
+      cardList.appendChild(card);
+    });
+  }
+
+  // 編集開始
+  function startEdit(item, index) {
+    if (!adminMode) return;
+    editIndex = index;
+
+    formTitle.textContent = "URL編集";
+    formModeLabel.textContent = "編集モード";
+    addSubmit.textContent = "上書き保存";
+
+    newTitle.value = item.title || "";
+    newURL.value = item.url || "";
+    newDetail.value = item.detail || "";
+    newCategory.value = item.category || "京王";
+    newImage.value = "";
+    deleteImage.checked = false;
+
+    viewMode = "settings";
+    searchBar.classList.add("hidden");
+    passwordBlock.classList.add("hidden");
+    formBlock.classList.remove("hidden");
+    updateView();
+  }
+
+  // 削除処理
+  async function deleteItem(index) {
+    if (!adminMode) return;
+    if (!confirm("削除しますか？")) return;
+
     const oldImageUrl = items[index].imageUrl;
 
-    // Firebase Storage の画像削除
     if (oldImageUrl) {
       try {
         const oldRef = sRef(storage, oldImageUrl);
@@ -293,15 +528,16 @@
       }
     }
 
-    // データ削除
     items.splice(index, 1);
     saveToFirebase();
     render();
   }
 
+  // タブ切り替え
   tabsEl.addEventListener("click", (e) => {
     const tab = e.target.closest(".tab");
     if (!tab) return;
+
     const tabName = tab.dataset.tab;
 
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -321,11 +557,13 @@
     render();
   });
 
+  // 検索
   searchInput.addEventListener("input", () => {
     searchText = searchInput.value.trim();
     render();
   });
 
+  // パスワード認証
   passSubmit.addEventListener("click", () => {
     if (adminPass.value === PASSWORD) {
       adminMode = true;
@@ -340,6 +578,7 @@
     }
   });
 
+  // 追加・編集保存
   addSubmit.addEventListener("click", async () => {
     const title = newTitle.value.trim();
     const url = newURL.value.trim();
@@ -352,14 +591,11 @@
     }
 
     let imageUrl = "";
-    const deleteImage = document.getElementById("deleteImage");
 
-    // 編集モードなら既存画像を保持
     if (editIndex !== null) {
       imageUrl = items[editIndex].imageUrl || "";
     }
 
-    // 画像削除チェック
     if (deleteImage.checked && imageUrl) {
       try {
         const oldRef = sRef(storage, imageUrl);
@@ -370,7 +606,6 @@
       imageUrl = "";
     }
 
-    // 新しい画像が選択されている場合
     if (newImage.files.length > 0) {
       const file = newImage.files[0];
       const storageRef = sRef(storage, "images/" + Date.now() + "_" + file.name);
@@ -396,6 +631,7 @@
     render();
   });
 
+  // 戻る
   backToList.addEventListener("click", () => {
     resetForm();
     viewMode = "list";
@@ -404,11 +640,13 @@
     render();
   });
 
+  // クラウド受信
   cloudLoad.addEventListener("click", () => {
     loadFromFirebase();
     alert("クラウドから最新データを読み込みました");
   });
 
+  // クラウド保存
   cloudSave.addEventListener("click", () => {
     saveToFirebase();
     alert("クラウドに保存しました");
